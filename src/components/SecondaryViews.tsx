@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StudyDocument } from '../types';
 import { Trash2, RotateCcw, ShieldCheck, AlertCircle, Settings, User, Bell, HardDrive, Key, HelpCircle } from 'lucide-react';
+import CustomDialog from './ui/CustomDialog';
+import { toast } from 'react-toastify';
 
 /* TRASH VIEW */
 interface TrashViewProps {
@@ -10,22 +12,49 @@ interface TrashViewProps {
 
 export const TrashView: React.FC<TrashViewProps> = ({ documents, setDocuments }) => {
   const deletedDocs = documents.filter((d) => d.isDeleted);
+  
+  // Custom dialog config state
+  const [dialogConfig, setDialogConfig] = useState<{
+    title: string;
+    message?: string;
+    showInput?: boolean;
+    defaultValue?: string;
+    inputPlaceholder?: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    isDanger?: boolean;
+    onConfirm: (value: string) => void;
+  } | null>(null);
 
   const handleRestore = (docId: string) => {
     setDocuments(prev => prev.map(d => d.id === docId ? { ...d, isDeleted: false } : d));
-    alert('Đã khôi phục tài liệu thành công!');
+    toast.success('Đã khôi phục tài liệu thành công!');
   };
 
   const handlePermanentDelete = (docId: string) => {
-    if (confirm('Bạn có đồng ý xóa vĩnh viễn tài liệu này khỏi hệ thống? Thao tác này không thể thu hồi.')) {
-      setDocuments(prev => prev.filter(d => d.id !== docId));
-    }
+    setDialogConfig({
+      title: 'Xóa vĩnh viễn',
+      message: 'Bạn có đồng ý xóa vĩnh viễn tài liệu này khỏi hệ thống? Thao tác này không thể thu hồi.',
+      confirmLabel: 'Xóa vĩnh viễn',
+      isDanger: true,
+      onConfirm: () => {
+        setDocuments(prev => prev.filter(d => d.id !== docId));
+        setDialogConfig(null);
+      }
+    });
   };
 
   const handleEmptyTrash = () => {
-    if (confirm('Dọn sạch hệ thống thùng rác? Tất cả tệp dữ liệu sẽ bị hủy bỏ vĩnh viễn.')) {
-      setDocuments(prev => prev.filter(d => !d.isDeleted));
-    }
+    setDialogConfig({
+      title: 'Dọn sạch thùng rác',
+      message: 'Dọn sạch hệ thống thùng rác? Tất cả tệp dữ liệu sẽ bị hủy bỏ vĩnh viễn.',
+      confirmLabel: 'Dọn sạch',
+      isDanger: true,
+      onConfirm: () => {
+        setDocuments(prev => prev.filter(d => !d.isDeleted));
+        setDialogConfig(null);
+      }
+    });
   };
 
   return (
@@ -90,6 +119,21 @@ export const TrashView: React.FC<TrashViewProps> = ({ documents, setDocuments })
             </div>
           ))}
         </div>
+      )}
+
+      {dialogConfig && (
+        <CustomDialog
+          isOpen={dialogConfig !== null}
+          title={dialogConfig.title}
+          message={dialogConfig.message}
+          showInput={dialogConfig.showInput}
+          defaultValue={dialogConfig.defaultValue}
+          inputPlaceholder={dialogConfig.inputPlaceholder}
+          confirmLabel={dialogConfig.confirmLabel}
+          isDanger={dialogConfig.isDanger}
+          onConfirm={dialogConfig.onConfirm}
+          onClose={() => setDialogConfig(null)}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StudyDocument } from '../types';
-import { X, Sparkles, AlertCircle, RefreshCw, MessageSquare, BookOpen, Lightbulb, Heading } from 'lucide-react';
+import { X, Sparkles, AlertCircle, RefreshCw, MessageSquare, BookOpen, Lightbulb, Heading, Eye, Download, Info } from 'lucide-react';
+import { fetchDocumentDetail } from '../services/documentsApi';
 
 interface AIDocumentOverlayProps {
   document: StudyDocument | null;
@@ -17,16 +18,31 @@ interface AnalysisResult {
 
 const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose, onOpenChat }) => {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [detailDoc, setDetailDoc] = useState<StudyDocument | null>(document);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!document) return;
+    if (!document) {
+      setDetailDoc(null);
+      setAnalysis(null);
+      return;
+    }
+    setDetailDoc(document);
 
     const analyzeDocument = async () => {
       setLoading(true);
       setError(null);
       try {
+        // Fetch real Swagger detail document first
+        try {
+          const detail = await fetchDocumentDetail(document.id);
+          setDetailDoc(detail);
+        } catch (detailErr) {
+          console.warn("Lỗi tải chi tiết tài liệu từ Swagger:", detailErr);
+        }
+
+        // Fetch analysis details
         const response = await fetch('/api/gemini/analyze-doc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -58,21 +74,21 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       {/* Backdrop */}
-      <div 
+      <div
         onClick={onClose}
         className="absolute inset-0 bg-[#000f21]/70 backdrop-blur-xs transition-opacity"
       ></div>
 
       {/* Slide-over Content Container */}
       <div className="relative w-full max-w-lg h-full bg-[#102034] border-l border-[#464554]/60 shadow-2xl flex flex-col z-10 transition-transform duration-300">
-        
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#464554]/40 flex items-center justify-between">
           <div className="flex items-center gap-2 text-[#c0c1ff]">
             <Sparkles className="w-5 h-5 text-[#ffb783]" />
             <h3 className="font-bold text-md text-[#d3e4fe]">Bản Phân Tích Trí Tuệ Nhân Tạo</h3>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-1 text-[#c7c4d7] hover:text-[#d3e4fe] rounded-full hover:bg-[#26364a]"
           >
@@ -82,21 +98,73 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
 
         {/* Scrollable Body */}
         <div className="p-6 flex-1 overflow-y-auto space-y-6">
-          
+
           {/* File Quick Info */}
-          <div className="p-4 bg-[#0b1c30]/70 border border-[#464554]/30 rounded-xl flex items-center gap-3">
-            <span 
-              className="text-md px-3 py-1.5 rounded-lg font-extrabold text-[#d3e4fe]"
-              style={{ backgroundColor: `${document.iconBg}20`, color: document.iconBg }}
-            >
-              {document.type.toUpperCase()}
-            </span>
-            <div className="overflow-hidden">
-              <h4 className="text-sm font-semibold text-[#d3e4fe] truncate" title={document.title}>
-                {document.title}
-              </h4>
-              <p className="text-xs text-[#c7c4d7] mt-0.5">{document.size} • {document.lastModified}</p>
+          <div className="p-4 bg-[#0b1c30]/70 border border-[#464554]/30 rounded-xl flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <span
+                className="text-md px-3 py-1.5 rounded-lg font-extrabold"
+                style={{ backgroundColor: `${detailDoc?.iconBg || document.iconBg}20`, color: detailDoc?.iconBg || document.iconBg }}
+              >
+                {(detailDoc?.type || document.type).toUpperCase()}
+              </span>
+              <div className="overflow-hidden flex-1">
+                <h4 className="text-sm font-semibold text-[#d3e4fe] truncate" title={detailDoc?.title || document.title}>
+                  {detailDoc?.title || document.title}
+                </h4>
+                <p className="text-xs text-[#c7c4d7] mt-0.5">
+                  {detailDoc?.size || document.size} • {detailDoc?.lastModified || document.lastModified}
+                </p>
+              </div>
             </div>
+
+            {/* Detailed metadata metrics */}
+            {detailDoc && (detailDoc.viewCount !== undefined || detailDoc.downloadCount !== undefined || detailDoc.pageCount !== undefined) && (
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#464554]/30 text-center select-none">
+                <div className="bg-[#102034]/50 p-2 rounded-lg border border-[#464554]/15">
+                  <span className="text-[10px] text-[#c7c4d7] block">Số trang</span>
+                  <span className="text-xs font-bold text-[#d3e4fe] mt-0.5 inline-flex items-center gap-1">
+                    <BookOpen className="w-3 h-3 text-[#ffb783]" />
+                    {detailDoc.pageCount ?? '—'}
+                  </span>
+                </div>
+                <div className="bg-[#102034]/50 p-2 rounded-lg border border-[#464554]/15">
+                  <span className="text-[10px] text-[#c7c4d7] block">Lượt xem</span>
+                  <span className="text-xs font-bold text-[#d3e4fe] mt-0.5 inline-flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5 text-[#c0c1ff]" />
+                    {detailDoc.viewCount ?? 0}
+                  </span>
+                </div>
+                <div className="bg-[#102034]/50 p-2 rounded-lg border border-[#464554]/15">
+                  <span className="text-[10px] text-[#c7c4d7] block">Lượt tải</span>
+                  <span className="text-xs font-bold text-[#d3e4fe] mt-0.5 inline-flex items-center gap-1">
+                    <Download className="w-3 h-3 text-[#10B981]" />
+                    {detailDoc.downloadCount ?? 0}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Description if present */}
+            {detailDoc?.description && (
+              <div className="pt-2 border-t border-[#464554]/30 text-xs text-[#c7c4d7] leading-relaxed">
+                <span className="font-semibold text-[#d3e4fe] block mb-1">Mô tả tài liệu:</span>
+                <p className="italic bg-[#102034]/20 p-2 rounded-lg border border-[#464554]/10">
+                  "{detailDoc.description}"
+                </p>
+              </div>
+            )}
+
+            {/* Tags if present */}
+            {detailDoc?.tags && detailDoc.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {detailDoc.tags.map((tag, idx) => (
+                  <span key={idx} className="text-[10px] bg-[#1b2b3f] text-[#c0c1ff] border border-[#c0c1ff]/20 px-2 py-0.5 rounded">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Loader or Error or Results */}
@@ -115,7 +183,7 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
             </div>
           ) : analysis ? (
             <div className="space-y-6">
-              
+
               {/* Keywords / Topics */}
               <div className="space-y-2">
                 <span className="text-xs text-[#c7c4d7] font-semibold uppercase tracking-wider flex items-center gap-1.5">
@@ -124,7 +192,7 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
                 </span>
                 <div className="flex flex-wrap gap-2 pt-0.5">
                   {analysis.topics.map((topic, i) => (
-                    <span 
+                    <span
                       key={i}
                       className="text-xs bg-[#c0c1ff]/10 text-[#c0c1ff] border border-[#c0c1ff]/20 px-2.5 py-1 rounded-full font-medium"
                     >
@@ -153,7 +221,7 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
                 </span>
                 <div className="grid grid-cols-1 gap-2.5">
                   {analysis.insights.map((insight, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="p-3 bg-[#0b1c30]/50 border border-[#464554]/20 rounded-lg text-xs leading-relaxed text-[#d3e4fe] flex items-start gap-2.5"
                     >
@@ -185,7 +253,7 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
 
         {/* Slide-over Footer */}
         <div className="p-4 bg-[#0b1c30] border-t border-[#464554]/40 flex gap-3">
-          <button 
+          <button
             type="button"
             onClick={() => onOpenChat(document)}
             className="flex-1 bg-[#8083ff] hover:bg-[#c0c1ff] text-[#0d0096] font-semibold rounded-xl py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 text-sm"

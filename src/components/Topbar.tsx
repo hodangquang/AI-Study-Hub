@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Search, Bell, Moon, Sun, LogOut } from "lucide-react";
+import { Search, Bell, Settings, LogOut } from "lucide-react";
+import { toast } from "react-toastify";
 
 interface User {
   fullName: string;
@@ -24,23 +25,17 @@ const Topbar: React.FC<TopbarProps> = ({
   onLogout,
 }) => {
   const [notifications, setNotifications] = useState(3);
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle("dark");
-  };
-
   return (
-    <header className="h-16 flex items-center justify-between px-8 bg-[#031427]/85 backdrop-blur-md border-b border-[#464554]/40 sticky top-0 z-40 select-none">
+    <header className="h-16 flex items-center justify-between px-8 bg-white border-b border-[#e0e3e7] sticky top-0 z-40 select-none">
       {/* Search Input */}
       <div className="flex items-center flex-1 max-w-xl">
         <div className="relative w-full group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#c7c4d7] w-4 border-none h-4 transition-colors group-focus-within:text-[#c0c1ff]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5f6368] w-4 border-none h-4 transition-colors group-focus-within:text-[#1967d2]" />
           <input
             type="text"
-            className="w-full bg-[#102034] border border-[#464554]/50 rounded-full py-2 pl-10 pr-4 text-sm text-[#d3e4fe] placeholder:text-[#c7c4d7]/70 focus:outline-none focus:border-[#c0c1ff] focus:ring-1 focus:ring-[#c0c1ff] transition-all bg-opacity-70 group-hover:border-[#c0c1ff]/50"
+            className="w-full bg-[#f1f3f4] border border-[#e0e3e7] rounded-full py-2 pl-10 pr-4 text-sm text-[#202124] placeholder:text-[#5f6368]/80 focus:outline-none focus:border-[#c7d2fe] focus:ring-1 focus:ring-[#c7d2fe] transition-all group-hover:border-[#c7d2fe]"
             placeholder="Tìm kiếm tài liệu, bài giảng, nhóm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -53,48 +48,39 @@ const Topbar: React.FC<TopbarProps> = ({
         {/* Notification Bell */}
         <button
           onClick={() => {
-            alert(
-              'Bạn có 3 thông báo mới: \n1. Tài liệu "Đề cương ôn tập.docx" đã xử lý xong.\n2. Bạn vừa được thêm vào Nhóm Marketing.\n3. Giáo viên cập nhật slide mới.',
+            toast.info(
+              'Bạn có 3 thông báo mới: \n1. Tài liệu "Đề cương ôn tập.docx" đã xử lý xong.\n2. Bạn vừa được thêm vào Nhóm Marketing.\n3. Giáo viên cập nhật slide mới.'
             );
             setNotifications(0);
           }}
-          className="relative w-10 h-10 flex items-center justify-center text-[#c7c4d7] hover:bg-[#26364a] hover:text-[#d3e4fe] rounded-full transition-all duration-200 cursor-pointer"
+          className="relative w-10 h-10 flex items-center justify-center text-[#5f6368] hover:bg-[#eceff1] hover:text-[#202124] rounded-full transition-all duration-200 cursor-pointer"
           title="Thông báo"
         >
           <Bell className="w-5 h-5" />
           {notifications > 0 && (
-            <span className="absolute top-2 right-2 w-2 h-2 bg-[#ffb783] rounded-full ring-2 ring-[#031427] animate-pulse"></span>
+            <span className="absolute top-2 right-2 w-2 h-2 bg-[#f28b82] rounded-full ring-2 ring-white animate-pulse"></span>
           )}
         </button>
 
-        {/* Dark Mode toggle */}
+        {/* Settings shortcut */}
         <button
-          onClick={toggleDarkMode}
-          className="w-10 h-10 flex items-center justify-center text-[#c7c4d7] hover:bg-[#26364a] hover:text-[#d3e4fe] rounded-full transition-all duration-200 cursor-pointer"
-          title={
-            isDarkMode ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"
-          }
+          onClick={() => toast.info("Theme sáng Google Drive đã được bật mặc định.")}
+          className="w-10 h-10 flex items-center justify-center text-[#5f6368] hover:bg-[#eceff1] hover:text-[#202124] rounded-full transition-all duration-200 cursor-pointer"
+          title="Giao diện"
         >
-          {isDarkMode ? (
-            <Sun className="w-5 h-5" />
-          ) : (
-            <Moon className="w-5 h-5" />
-          )}
+          <Settings className="w-5 h-5" />
         </button>
 
         {/* User Block */}
-        <div className="flex items-center gap-3 pl-4 border-l border-[#464554]/30 select-none relative">
+        <div className="flex items-center gap-3 pl-4 border-l border-[#e0e3e7] select-none relative">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-[#d3e4fe]">
+            <p className="text-sm font-semibold text-[#202124]">
               {user?.fullName || "Nguyễn Minh Khôi"}
-            </p>
-            <p className="text-xs text-[#c7c4d7] font-medium opacity-80">
-              Gói Premium
             </p>
           </div>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="w-9 h-9 rounded-full border border-[#464554]/50 overflow-hidden shadow-md cursor-pointer hover:border-[#c0c1ff] transition-all duration-300"
+            className="w-9 h-9 rounded-full border border-[#d2d6db] overflow-hidden shadow-sm cursor-pointer hover:border-[#c7d2fe] transition-all duration-300"
           >
             <img
               alt={user?.fullName || "User Avatar"}
@@ -108,7 +94,7 @@ const Topbar: React.FC<TopbarProps> = ({
 
           {/* User Menu Dropdown */}
           {showUserMenu && onLogout && (
-            <div className="absolute top-full right-0 mt-2 bg-[#102034] border border-[#464554]/50 rounded-lg shadow-lg z-50 min-w-[180px]">
+            <div className="absolute top-full right-0 mt-2 bg-white border border-[#e0e3e7] rounded-lg shadow-lg z-50 min-w-[180px]">
               <button
                 onClick={() => {
                   onLogout();
