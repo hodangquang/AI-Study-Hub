@@ -33,8 +33,8 @@ export default function RegisterView({
   };
 
   return (
-    <div className="min-h-screen bg-[#031427] flex justify-center px-4 py-10 items-start md:items-center">
-      <div className="w-full max-w-5xl bg-slate-900/50 border border-slate-700/50 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
+    <div className="h-screen overflow-hidden bg-[#f8fafd] flex justify-center px-4 py-6 items-center">
+      <div className="w-full max-w-3xl bg-white border border-slate-200/80 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
         <div className="w-full md:w-1/2 h-48 md:h-auto md:self-stretch relative overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2000"
@@ -44,12 +44,12 @@ export default function RegisterView({
           />
         </div>
 
-        <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
+        <div className="w-full md:w-1/2 p-5 md:p-6 flex flex-col justify-center overflow-y-auto max-h-full">
           <div className="w-full max-w-sm mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
+            <h2 className="text-xl font-bold text-[#202124] mb-0.5">
               Tạo tài khoản
             </h2>
-            <p className="text-slate-400 mb-4">
+            <p className="text-[#5f6368] text-sm mb-3">
               Bắt đầu hành trình học tập thông minh
             </p>
 
@@ -61,7 +61,7 @@ export default function RegisterView({
               validateOnChange
             >
               {(formik) => (
-                <Form className="space-y-3" noValidate>
+                <Form className="space-y-2" noValidate>
                   <AuthField
                     formik={formik}
                     name="fullName"
@@ -173,7 +173,7 @@ export default function RegisterView({
                 <div className="w-full border-t border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-900 text-slate-400">
+                <span className="px-2 bg-[#f1f3f4] text-[#5f6368]">
                   Hoặc tiếp tục với
                 </span>
               </div>
@@ -182,7 +182,7 @@ export default function RegisterView({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-500 cursor-not-allowed text-sm font-medium"
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-[#e8f0fe] border border-[#d2e3fc] rounded-lg text-[#1967d2] hover:bg-[#dbeafe] hover:text-[#1967d2] cursor-pointer text-sm font-medium transition-colors"
                 title="Sắp ra mắt"
               >
                 <Chrome className="w-5 h-5" />
@@ -190,7 +190,7 @@ export default function RegisterView({
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-500 cursor-not-allowed text-sm font-medium"
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f1f3f4] border border-[#e0e3e7] rounded-lg text-[#202124] hover:bg-[#eceff1] hover:text-[#1967d2] cursor-pointer text-sm font-medium transition-colors"
                 title="Sắp ra mắt"
               >
                 <Github className="w-5 h-5" />
@@ -198,12 +198,12 @@ export default function RegisterView({
               </button>
             </div>
 
-            <div className="mt-5 text-center text-slate-400">
+            <div className="mt-5 text-center text-[#5f6368]">
               Đã có tài khoản?{" "}
               <button
                 type="button"
                 onClick={onSwitchToLogin}
-                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                className="text-[#1967d2] hover:text-[#174ea6] font-medium transition-colors"
               >
                 Đăng nhập
               </button>

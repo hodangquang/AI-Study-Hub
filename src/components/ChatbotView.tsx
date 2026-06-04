@@ -130,12 +130,12 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
   const selectedDocInfo = documents.find(d => d.id === selectedDocId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-9rem)] bg-[#102034]/40 border border-[#464554]/50 rounded-xl overflow-hidden select-none">
+    <div className="flex flex-col h-[calc(100vh-9rem)] bg-white border border-[#e0e3e7] rounded-xl overflow-hidden select-none">
       
       {/* Top chat controls */}
-      <div className="px-6 py-3 bg-[#102034] border-b border-[#464554]/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div className="px-6 py-3 bg-white border-b border-[#e0e3e7] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-[#c0c1ff]" />
+          <Bot className="w-5 h-5 text-[#1967d2]" />
           <div>
             <h3 className="font-semibold text-sm text-[#d3e4fe]">Phòng Hỗ trợ Ôn tập cùng AI</h3>
             <p className="text-[11px] text-[#c7c4d7]/70">Mô hình: Gemini 3.5 Flash</p>
@@ -146,7 +146,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Paperclip className="w-4 h-4 text-[#c7c4d7]" />
           <select
-            className="w-full sm:w-60 bg-[#1b2b3f] border border-[#464554]/60 rounded-lg py-1.5 px-3 text-xs text-[#d3e4fe] focus:outline-none focus:border-[#c0c1ff]"
+            className="w-full sm:w-60 bg-white border border-[#e0e3e7] rounded-lg py-1.5 px-3 text-xs text-[#202124] focus:outline-none focus:border-[#c7d2fe]"
             value={selectedDocId}
             onChange={(e) => setSelectedDocId(e.target.value)}
           >
@@ -169,22 +169,22 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
               key={msg.id} 
               className={`flex items-start gap-3.5 max-w-[85%] ${isAI ? 'mr-auto' : 'ml-auto flex-row-reverse'}`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAI ? 'bg-[#571bc1] text-[#c4abff]' : 'bg-[#26364a] text-[#d3e4fe]'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAI ? 'bg-[#e8f0fe] text-[#1967d2]' : 'bg-[#f1f3f4] text-[#202124] border border-[#e0e3e7]'}`}>
                 {isAI ? <Bot className="w-4.5 h-4.5" /> : <User className="w-4.5 h-4.5" />}
               </div>
 
               <div className="space-y-1">
                 {/* Active attached document tag if referenced */}
                 {msg.documentId && documents.find(d => d.id === msg.documentId) && (
-                  <span className="inline-flex text-[10px] bg-[#8083ff]/10 text-[#c0c1ff] font-semibold px-2 py-0.5 rounded-sm select-none">
+                  <span className="inline-flex text-[10px] bg-[#e8f0fe] text-[#1967d2] font-semibold px-2 py-0.5 rounded-sm select-none">
                     🎯 Đang trao đổi về: {documents.find(d => d.id === msg.documentId)?.title}
                   </span>
                 )}
 
                 <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                  isAI 
-                    ? 'bg-[#102034] border border-[#464554]/30 text-[#d3e4fe]' 
-                    : 'bg-[#571bc1]/80 text-[#d3e4fe] shadow-md shadow-[#571bc1]/10'
+                  isAI
+                    ? 'bg-[#f1f3f4] border border-[#e0e3e7] text-[#202124]'
+                    : 'bg-[#e8f0fe] text-[#1967d2] shadow-sm'
                 }`}>
                   {msg.text}
                 </div>
@@ -196,11 +196,11 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
         {/* Typing indicator loader animation */}
         {loading && (
           <div className="flex items-start gap-3.5 mr-auto max-w-[80%]">
-            <div className="w-8 h-8 rounded-full bg-[#571bc1] text-[#c4abff] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#e8f0fe] text-[#1967d2] flex items-center justify-center shrink-0 border border-[#e0e3e7]">
               <Bot className="w-4.5 h-4.5" />
             </div>
-            <div className="bg-[#102034] border border-[#464554]/30 p-4 rounded-2xl text-sm text-[#c7c4d7] flex items-center gap-2">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#c0c1ff]" />
+          <div className="bg-[#f1f3f4] border border-[#e0e3e7] p-4 rounded-2xl text-sm text-[#5f6368] flex items-center gap-2">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#1967d2]" />
               <span>Trợ lý AI đang nghiên cứu tài liệu và gõ câu trả lời...</span>
             </div>
           </div>
@@ -209,7 +209,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
       </div>
 
       {/* Bottom control input box */}
-      <div className="p-4 bg-[#102034]/80 border-t border-[#464554]/40 space-y-3">
+      <div className="p-4 bg-white border-t border-[#e0e3e7] space-y-3">
         {/* Quick click educational prompts if there's no major history, or as floating assist */}
         {messages.length === 1 && (
           <div className="flex flex-wrap gap-2 select-none">
@@ -218,7 +218,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
                 key={i}
                 type="button"
                 onClick={(e) => handleSendMessage(e, p.text)}
-                className="text-xs bg-[#1b2b3f] hover:bg-[#26364a] text-[#c0c1ff] border border-[#464554]/40 px-3 py-1.5 rounded-lg transition-transform hover:scale-[1.01] cursor-pointer"
+                className="text-xs bg-[#f1f3f4] hover:bg-[#eceff1] text-[#202124] border border-[#e0e3e7] px-3 py-1.5 rounded-lg transition-transform hover:scale-[1.01] cursor-pointer"
               >
                 {p.label}
               </button>
@@ -229,7 +229,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
         <form onSubmit={(e) => handleSendMessage(e)} className="flex gap-2">
           <input
             type="text"
-            className="flex-1 bg-[#1b2b3f] border border-[#464554]/60 rounded-xl py-3 px-4 text-sm text-[#d3e4fe] placeholder:text-[#c7c4d7]/50 focus:outline-none focus:border-[#c0c1ff] transition-all"
+          className="flex-1 bg-white border border-[#e0e3e7] rounded-xl py-3 px-4 text-sm text-[#202124] placeholder:text-[#5f6368]/70 focus:outline-none focus:border-[#c7d2fe] transition-all"
             placeholder={
               selectedDocInfo 
                 ? `Hỏi bất kỳ điều gì về tài liệu "${selectedDocInfo.title}"...` 
@@ -241,7 +241,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="w-12 h-11 bg-[#c0c1ff] hover:bg-[#e1e0ff] text-[#1000a9] rounded-xl flex items-center justify-center transition-all disabled:opacity-40 disabled:hover:bg-[#c0c1ff] shrink-0 cursor-pointer"
+          className="w-12 h-11 bg-[#e8f0fe] hover:bg-[#dbeafe] text-[#1967d2] rounded-xl flex items-center justify-center transition-all disabled:opacity-40 disabled:hover:bg-[#e8f0fe] shrink-0 cursor-pointer"
             title="Gửi tin nhắn"
           >
             <Send className="w-5 h-5" />

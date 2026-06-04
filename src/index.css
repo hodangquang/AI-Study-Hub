@@ -1,1 +1,112 @@
 @import "tailwindcss";
+
+/* Google Drive-like light theme overrides for legacy dark utility classes */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #f8fafd;
+  color: #1f1f1f;
+}
+
+.bg-\[\#031427\],
+.bg-\[\#031427\]\/85,
+.bg-\[\#102034\],
+.bg-\[\#102034\]\/50,
+.bg-\[\#102034\]\/40,
+.bg-\[\#102034\]\/30,
+.bg-\[\#0b1c30\]\/70,
+.bg-\[\#0b1c30\]\/60,
+.bg-\[\#0b1c30\]\/50,
+.bg-\[\#1b2b3f\] {
+  background-color: #ffffff !important;
+}
+
+.bg-\[\#26364a\],
+.bg-\[\#26364a\]\/30 {
+  background-color: #f1f3f4 !important;
+}
+
+.text-\[\#d3e4fe\],
+.text-\[\#c7c4d7\],
+.text-\[\#c7c4d7\]\/80,
+.text-\[\#c7c4d7\]\/70,
+.text-\[\#c4abff\] {
+  color: #3c4043 !important;
+}
+
+.border-\[\#464554\]\/60,
+.border-\[\#464554\]\/50,
+.border-\[\#464554\]\/45,
+.border-\[\#464554\]\/40,
+.border-\[\#464554\]\/30,
+.border-\[\#464554\]\/25,
+.border-\[\#464554\]\/20,
+.border-\[\#464554\]\/10 {
+  border-color: #e0e3e7 !important;
+}
+
+.hover\:border-\[\#c0c1ff\]:hover,
+.hover\:border-\[\#c0c1ff\]\/50:hover,
+.hover\:border-\[\#c0c1ff\]\/30:hover {
+  border-color: #c7d2fe !important;
+}
+
+.bg-\[\#571bc1\] {
+  background-color: #e8f0fe !important;
+}
+
+.text-\[\#c0c1ff\] {
+  color: #1967d2 !important;
+}
+
+.text-\[\#1000a9\] {
+  color: #174ea6 !important;
+}
+
+.bg-\[\#c0c1ff\],
+.bg-\[\#e1e0ff\] {
+  background-color: #e8f0fe !important;
+}
+
+/* Force all old dark hover states to light hover */
+.hover\:bg-\[\#26364a\]:hover,
+.hover\:bg-\[\#1b2b3f\]:hover,
+.hover\:bg-\[\#102034\]:hover,
+.hover\:bg-\[\#102034\]\/40:hover,
+.hover\:bg-\[\#102034\]\/50:hover,
+.hover\:bg-\[\#031427\]\/80:hover {
+  background-color: #eceff1 !important;
+}
+
+.hover\:text-\[\#d3e4fe\]:hover,
+.hover\:text-\[\#c0c1ff\]:hover {
+  color: #202124 !important;
+}
+
+/* Keep card/list preview images bright in light theme */
+.mix-blend-overlay {
+  mix-blend-mode: normal !important;
+}
+
+/* Auth pages light style */
+.bg-slate-900\/50,
+.bg-slate-800\/60 {
+  background-color: #ffffff !important;
+}
+
+.border-slate-700\/50,
+.border-slate-700 {
+  border-color: #e0e3e7 !important;
+}
+
+.text-white {
+  color: #202124 !important;
+}
+
+.text-slate-400,
+.text-slate-500,
+.text-slate-300 {
+  color: #5f6368 !important;
+}

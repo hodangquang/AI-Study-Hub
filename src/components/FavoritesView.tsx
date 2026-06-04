@@ -1,6 +1,8 @@
 import React from 'react';
 import { StudyDocument } from '../types';
 import { Star, FileText, ArrowUpDown, Filter, HelpCircle, PlusCircle } from 'lucide-react';
+import { unbookmarkDocumentOnBackend } from '../services/documentsApi';
+import { toast } from 'react-toastify';
 
 interface FavoritesViewProps {
   documents: StudyDocument[];
@@ -19,9 +21,15 @@ const FavoritesView: React.FC<FavoritesViewProps> = ({
 }) => {
   const favoriteDocs = documents.filter((d) => d.isFavorite && !d.isDeleted && d.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const handleRemoveFavorite = (e: React.MouseEvent, docId: string) => {
+  const handleRemoveFavorite = async (e: React.MouseEvent, docId: string) => {
     e.stopPropagation();
-    setDocuments(prev => prev.map(d => d.id === docId ? { ...d, isFavorite: false } : d));
+    try {
+      await unbookmarkDocumentOnBackend(docId);
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, isFavorite: false } : d));
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể bỏ yêu thích tài liệu trên máy chủ.');
+    }
   };
 
   // Pre-sourced beautiful illustrations for vellum covers to match mock exactly
@@ -38,26 +46,26 @@ const FavoritesView: React.FC<FavoritesViewProps> = ({
 
   return (
     <div className="space-y-6 select-none">
-      
+
       {/* Title Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-[#d3e4fe]">Tài liệu yêu thích</h2>
-          <p className="text-sm text-[#c7c4d7] mt-1">Quản lý và ôn tập các tài liệu quan trọng đã được lưu trữ.</p>
+          <h2 className="text-2xl font-bold text-[#202124]">Tài liệu yêu thích</h2>
+          <p className="text-sm text-[#5f6368] mt-1">Quản lý và ôn tập các tài liệu quan trọng đã được lưu trữ.</p>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={() => alert('Đang lọc danh sách...')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#102034] border border-[#464554]/50 rounded-lg text-xs font-semibold text-[#c7c4d7] hover:bg-[#26364a] cursor-pointer"
+          <button
+            onClick={() => toast.info('Đang lọc danh sách...')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#e0e3e7] rounded-lg text-xs font-semibold text-[#202124] hover:bg-[#eceff1] cursor-pointer"
           >
-            <Filter className="w-4 h-4 text-[#c7c4d7]/70" />
+            <Filter className="w-4 h-4 text-[#5f6368]/70" />
             <span>Bộ lọc</span>
           </button>
-          <button 
-            onClick={() => alert('Đang sắp xếp danh sách...')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#102034] border border-[#464554]/50 rounded-lg text-xs font-semibold text-[#c7c4d7] hover:bg-[#26364a] cursor-pointer"
+          <button
+            onClick={() => toast.info('Đang sắp xếp danh sách...')}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#e0e3e7] rounded-lg text-xs font-semibold text-[#202124] hover:bg-[#eceff1] cursor-pointer"
           >
-            <ArrowUpDown className="w-4 h-4 text-[#c7c4d7]/70" />
+            <ArrowUpDown className="w-4 h-4 text-[#5f6368]/70" />
             <span>Sắp xếp</span>
           </button>
         </div>
@@ -66,34 +74,34 @@ const FavoritesView: React.FC<FavoritesViewProps> = ({
       {/* Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {favoriteDocs.map((doc) => (
-          <div 
+          <div
             key={doc.id}
             onClick={() => onOpenAIOverlay(doc)}
-            className="group bg-[#102034]/70 border border-[#464554]/60 rounded-xl overflow-hidden hover:border-[#c0c1ff]/50 transition-all duration-300 flex flex-col cursor-pointer shadow-md"
+            className="group bg-white border border-[#e0e3e7] rounded-xl overflow-hidden hover:border-[#c7d2fe]/60 transition-all duration-300 flex flex-col cursor-pointer shadow-sm"
           >
             {/* Visual Book Cover preview section */}
-            <div className="relative h-40 bg-[#26364a] overflow-hidden">
-              <img 
+            <div className="relative h-40 bg-[#f1f3f4] overflow-hidden">
+              <img
                 alt={`${doc.title} Preview`}
-                className="w-full h-full object-cover opacity-50 group-hover:scale-[1.03] transition-transform duration-500"
+                className="w-full h-full object-cover opacity-95 group-hover:scale-[1.03] group-hover:opacity-100 transition-all duration-500"
                 src={coverUrls[doc.id] || defaultCover}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#102034] to-transparent"></div>
-              
+              <div className="absolute inset-0 bg-gradient-to-t from-white/90 to-transparent"></div>
+
               {/* Star Button overlay */}
               <div className="absolute top-3 right-3 select-none">
-                <button 
+                <button
                   onClick={(e) => handleRemoveFavorite(e, doc.id)}
-                  className="w-8 h-8 flex items-center justify-center bg-[#031427]/80 hover:bg-[#102034] backdrop-blur-md rounded-full text-[#ffb783] hover:text-[#ffb4ab] transition-colors border border-[#464554]/20 cursor-pointer"
+                  className="w-8 h-8 flex items-center justify-center bg-white/90 hover:bg-[#e8f0fe] backdrop-blur-md rounded-full text-[#1967d2] hover:text-[#1967d2] transition-colors border border-[#e0e3e7] cursor-pointer"
                   title="Bỏ yêu thích"
                 >
-                  <Star className="w-4 h-4 fill-[#ffb783] text-[#ffb783]" />
+                  <Star className="w-4 h-4 fill-[#1967d2] text-[#1967d2]" />
                 </button>
               </div>
 
               {/* Format Badge */}
               <div className="absolute bottom-3 left-3 select-none">
-                <span className="bg-[#1b2b3f]/85 text-[#c7c4d7] px-2 py-0.5 rounded text-[9px] font-bold border border-[#464554]/40 uppercase tracking-widest">
+                <span className="bg-[#f1f3f4] text-[#5f6368] px-2 py-0.5 rounded text-[9px] font-bold border border-[#e0e3e7] uppercase tracking-widest">
                   {doc.type}
                 </span>
               </div>
@@ -101,27 +109,27 @@ const FavoritesView: React.FC<FavoritesViewProps> = ({
 
             {/* Title body & state status */}
             <div className="p-4 flex flex-col flex-1">
-              <h3 className="font-semibold text-sm text-[#d3e4fe] group-hover:text-[#c0c1ff] line-clamp-2 leading-relaxed mb-3">
+              <h3 className="font-semibold text-sm text-[#202124] group-hover:text-[#1967d2] line-clamp-2 leading-relaxed mb-3">
                 {doc.title}
               </h3>
 
               {/* Tag Badges */}
               <div className="flex flex-wrap gap-1 mb-4 select-none">
-                <span className="text-[9px] bg-[#26364a] text-[#c7c4d7] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
+                <span className="text-[9px] bg-[#e8eaed] text-[#202124] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
                   {doc.category.trim()}
                 </span>
-                <span className="text-[9px] bg-[#26364a] text-[#c7c4d7] px-2 py-0.5 rounded-full font-medium">
+                <span className="text-[9px] bg-[#e8eaed] text-[#202124] px-2 py-0.5 rounded-full font-medium">
                   {doc.size}
                 </span>
               </div>
 
               {/* AI Sẵn sàng and last modified info */}
-              <div className="mt-auto flex items-center justify-between pt-3 border-t border-[#464554]/20 select-none">
+              <div className="mt-auto flex items-center justify-between pt-3 border-t border-[#e0e3e7] select-none">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                  <span className="text-[11px] font-semibold text-[#c7c4d7]/90">AI Sẵn sàng</span>
+                  <span className="text-[11px] font-semibold text-[#202124]">AI Sẵn sàng</span>
                 </div>
-                <span className="text-[11px] text-[#c7c4d7]/60">{doc.lastModified}</span>
+                <span className="text-[11px] text-[#5f6368]/80">{doc.lastModified}</span>
               </div>
             </div>
 
@@ -129,14 +137,14 @@ const FavoritesView: React.FC<FavoritesViewProps> = ({
         ))}
 
         {/* Empty list quick add simulation card */}
-        <div 
+        <div
           onClick={() => setActiveTab('documents')}
-          className="border-2 border-dashed border-[#464554] rounded-xl flex flex-col items-center justify-center p-6 gap-3 group hover:bg-[#102034]/40 hover:border-[#c0c1ff]/50 transition-all cursor-pointer min-h-[220px]"
+          className="border-2 border-dashed border-[#e0e3e7] bg-white rounded-xl flex flex-col items-center justify-center p-6 gap-3 group hover:bg-[#f1f3f4] hover:border-[#c7d2fe]/60 transition-all cursor-pointer min-h-[220px]"
         >
-          <div className="w-11 h-11 rounded-full bg-[#1b2b3f] flex items-center justify-center group-hover:bg-[#c0c1ff]/10 transition-all">
-            <span className="text-[#c7c4d7] group-hover:text-[#c0c1ff] font-bold text-xl">+</span>
+          <div className="w-11 h-11 rounded-full bg-[#f1f3f4] flex items-center justify-center group-hover:bg-[#e8f0fe]/80 transition-all border border-[#e0e3e7]">
+            <span className="text-[#5f6368] group-hover:text-[#1967d2] font-bold text-xl">+</span>
           </div>
-          <p className="text-xs text-[#c7c4d7]/80 text-center font-medium max-w-[160px] leading-relaxed">
+          <p className="text-xs text-[#5f6368]/80 text-center font-medium max-w-[160px] leading-relaxed">
             Thêm tài liệu vào danh sách yêu thích
           </p>
         </div>

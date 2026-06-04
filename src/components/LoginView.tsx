@@ -141,12 +141,12 @@ export default function LoginView({
               )}
             </Formik>
 
-            <div className="relative my-6">
+             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-700" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-900 text-slate-400">
+                <span className="px-2 bg-[#f1f3f4] text-[#5f6368]">
                   Hoặc tiếp tục với
                 </span>
               </div>
@@ -155,7 +155,7 @@ export default function LoginView({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-500 cursor-not-allowed text-sm font-medium"
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-[#e8f0fe] border border-[#d2e3fc] rounded-lg text-[#1967d2] hover:bg-[#dbeafe] hover:text-[#1967d2] cursor-pointer text-sm font-medium transition-colors"
                 title="Sắp ra mắt"
               >
                 <Chrome className="w-5 h-5" />
@@ -163,7 +163,7 @@ export default function LoginView({
               </button>
               <button
                 type="button"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-800/60 border border-slate-700 rounded-lg text-slate-500 cursor-not-allowed text-sm font-medium"
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f1f3f4] border border-[#e0e3e7] rounded-lg text-[#202124] hover:bg-[#eceff1] hover:text-[#1967d2] cursor-pointer text-sm font-medium transition-colors"
                 title="Sắp ra mắt"
               >
                 <Github className="w-5 h-5" />

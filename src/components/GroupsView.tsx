@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StudyGroup } from '../types';
 import { Folder, Plus, Search, MessageSquare, PlusCircle, Check, Users } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 interface GroupsViewProps {
   groups: StudyGroup[];
@@ -20,7 +21,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ groups, setGroups, searchQuery 
   const handleCreateGroup = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupName.trim() || !newGroupDesc.trim()) {
-      alert('Vui lòng điền đầy đủ tên nhóm và mô tả!');
+      toast.warn('Vui lòng điền đầy đủ tên nhóm và mô tả!');
       return;
     }
 
@@ -44,7 +45,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ groups, setGroups, searchQuery 
     };
 
     setGroups(prev => [newGroup, ...prev]);
-    alert(`Đã khởi tạo không gian nhóm học tập "${newGroupName}" thành công!`);
+    toast.success(`Đã khởi tạo không gian nhóm học tập "${newGroupName}" thành công!`);
     
     // Reset fields
     setNewGroupName('');
@@ -115,7 +116,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({ groups, setGroups, searchQuery 
               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
               <img 
                 alt={`${g.name} Cover`} 
-                className="w-full h-full object-cover opacity-50 group-hover:opacity-75 transition-opacity duration-300 mix-blend-overlay"
+                className="w-full h-full object-cover opacity-95 group-hover:opacity-100 transition-opacity duration-300"
                 src={g.coverUrl}
               />
               <div className="absolute top-3 right-3 flex gap-1">

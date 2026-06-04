@@ -12,6 +12,14 @@ export interface StudyDocument {
   downloadUrl?: string;
   iconBg: string;
   isDeleted?: boolean;
+  ownerName?: string;
+  ownerAvatar?: string;
+  uploaderId?: string;
+  description?: string;
+  pageCount?: number;
+  viewCount?: number;
+  downloadCount?: number;
+  tags?: string[];
 }
 
 export interface StudyGroup {

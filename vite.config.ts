@@ -25,6 +25,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      '/documents': {
+        target: 'https://ai-study-hub-zk1m.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
+      '/categories': {
+        target: 'https://ai-study-hub-zk1m.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
     },
     watch: {
       ignored: ['**/zip/**', '**/ai-study-hub/**'],
