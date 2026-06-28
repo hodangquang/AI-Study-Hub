@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StudyDocument, StudyGroup } from '../types';
-import { AuthUser } from '../types/auth';
+import { StudyDocument, StudyGroup } from '@/types';
+import { AuthUser } from '@/types/auth';
 import {
   Folder,
   FileText,
@@ -34,9 +34,9 @@ import {
   downloadDocumentFile,
   updateDocumentMetadata,
   createDocumentShareLink
-} from '../services/documentsApi';
-import CustomDialog from './ui/CustomDialog';
-import ShareModal from './modals/ShareModal';
+} from '@/services/documentsApi';
+import CustomDialog from '@/components/ui/CustomDialog';
+import ShareModal from '@/components/modals/ShareModal';
 
 interface HomeViewProps {
   documents: StudyDocument[];
@@ -116,13 +116,13 @@ const HomeView: React.FC<HomeViewProps> = ({
       const isFolder = type === 'folder';
       const dropdownWidth = isFolder ? 176 : 192;
       const dropdownHeight = isFolder ? 120 : 240;
-      
+
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUpward = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
-      
+
       const top = openUpward ? rect.top - dropdownHeight - 6 : rect.bottom + 6;
       const left = rect.right - dropdownWidth;
-      
+
       setDropdownCoords({ top, left });
       setOpenDropdownId(id);
     }

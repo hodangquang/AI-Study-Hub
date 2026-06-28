@@ -1,36 +1,38 @@
 import { useState, useEffect } from "react";
-import { INITIAL_GROUPS } from "./data";
+import { INITIAL_GROUPS } from "@/data";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { StudyDocument, StudyGroup } from "./types";
-import { fetchDocuments, fetchCategories, resolveShareToken, uploadDocumentFile } from "./services/documentsApi";
+import { StudyDocument, StudyGroup } from "@/types";
+import { fetchDocuments, fetchCategories, resolveShareToken, uploadDocumentFile } from "@/services/documentsApi";
 
 // Component imports
-import Sidebar from "./components/Sidebar";
-import Topbar from "./components/Topbar";
-import HomeView from "./components/HomeView";
-import DocumentsView from "./components/DocumentsView";
-import GroupsView from "./components/GroupsView";
-import FavoritesView from "./components/FavoritesView";
-import ChatbotView from "./components/ChatbotView";
-import AIDocumentOverlay from "./components/AIDocumentOverlay";
-import UploadModal from "./components/UploadModal";
-import LoginView from "./components/LoginView";
-import RegisterView from "./components/RegisterView";
+import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
+import HomeView from "@/pages/home/HomeView";
+import DocumentsView from "@/pages/documents/DocumentsView";
+import GroupsView from "@/pages/groups/GroupsView";
+import FavoritesView from "@/pages/favorites/FavoritesView";
+import ChatbotView from "@/pages/chatbot/ChatbotView";
+import AIDocumentOverlay from "@/components/AIDocumentOverlay";
+import UploadModal from "@/components/UploadModal";
+import LoginView from "@/pages/auth/LoginView";
+import RegisterView from "@/pages/auth/RegisterView";
 import {
   TrashView,
   SettingsView,
   AdminView,
   HelpView,
-} from "./components/SecondaryViews";
-import type { AuthSession, AuthUser } from "./types/auth";
+} from "@/pages/dashboard/SecondaryViews";
+import ProfileView from "@/pages/profile/ProfileView";
+import type { AuthSession, AuthUser, UserStorageInfo } from "@/types/auth";
+import { getCurrentUserStorageQuota } from "@/services/authApi";
 import {
   clearAuthSession,
   loadAuthSession,
   saveAuthSession,
   isTokenExpired,
   registerSessionExpiredHandler,
-} from "./lib/authStorage";
+} from "@/lib/authStorage";
 
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -42,6 +44,7 @@ export default function App() {
   const [documents, setDocuments] = useState<StudyDocument[]>([]);
   const [folders, setFolders] = useState<any[]>([]);
   const [groups, setGroups] = useState<StudyGroup[]>([]);
+  const [storageQuota, setStorageQuota] = useState<UserStorageInfo | null>(null);
 
   // Modal & Slideover navigation states
   const [selectedDocForAI, setSelectedDocForAI] =
@@ -111,6 +114,20 @@ export default function App() {
       setFolders([]);
     }
   }, [user]);
+
+  // Load storage quota dynamically when user logs in or uploads/deletes a document
+  useEffect(() => {
+    if (user) {
+      getCurrentUserStorageQuota()
+        .then((quota) => setStorageQuota(quota))
+        .catch((err) => {
+          console.error("Lỗi tải hạn mức bộ nhớ từ API thật:", err);
+          setStorageQuota(null);
+        });
+    } else {
+      setStorageQuota(null);
+    }
+  }, [user, documents]);
 
   // Auto-import shared document from URL pathname on boot
   useEffect(() => {
@@ -211,6 +228,17 @@ export default function App() {
     setActiveTab("home");
   };
 
+  const handleUserUpdate = (updatedFields: { fullName: string; username: string; avatarUrl?: string }) => {
+    if (!user) return;
+    const updatedUser = { ...user, ...updatedFields };
+    setUser(updatedUser);
+    const session = loadAuthSession();
+    if (session) {
+      session.user = updatedUser;
+      saveAuthSession(session);
+    }
+  };
+
   // Handles adding new uploads
   const handleUploadSuccess = (newDoc: StudyDocument) => {
     setDocuments((prev) => [newDoc, ...prev]);
@@ -269,6 +297,7 @@ export default function App() {
           <ChatbotView
             documents={documents}
             initialSelectedDoc={initialSelectedDocForChat}
+            currentUser={user}
           />
         );
       case "favorites":
@@ -289,6 +318,8 @@ export default function App() {
         return <AdminView />;
       case "help":
         return <HelpView />;
+      case "profile":
+        return <ProfileView onUpdateUser={handleUserUpdate} />;
       default:
         return (
           <div className="text-center py-20 text-[#c7c4d7]">
@@ -328,8 +359,7 @@ export default function App() {
               }
             }}
             openUploadModal={() => setShowUploadModal(true)}
-            storageUsed={2.4}
-            storageTotal={5}
+            storageQuota={storageQuota}
             folders={folders}
             onImportSuccess={handleUploadSuccess}
           />
@@ -342,6 +372,7 @@ export default function App() {
               setSearchQuery={setSearchQuery}
               user={user}
               onLogout={handleLogout}
+              onViewProfile={() => setActiveTab("profile")}
             />
 
             {/* Dynamic Main Workspace page */}

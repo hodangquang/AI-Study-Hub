@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatMessage, StudyDocument } from '../types';
+import { ChatMessage, StudyDocument } from '@/types';
+import { AuthUser } from '@/types/auth';
 import { Send, Bot, User, Sparkles, Paperclip, MessageSquare, RefreshCw } from 'lucide-react';
 
 interface ChatbotViewProps {
   documents: StudyDocument[];
   initialSelectedDoc: StudyDocument | null;
+  currentUser: AuthUser | null;
 }
 
-const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc }) => {
+const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc, currentUser }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [selectedDocId, setSelectedDocId] = useState<string>('');
@@ -35,16 +37,17 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
         }
       ]);
     } else {
+      const displayName = currentUser?.fullName || 'bạn';
       setMessages([
         {
           id: 'welcome',
           role: 'model',
-          text: 'Xin chào Nguyễn Minh Khôi! Tôi là **Trợ lý AI Học tập** của bạn. Bạn muốn tôi giúp giải thích công thức Giải tích, ôn tập Cơ sở Dữ liệu hay tạo dàn ý học tập hôm nay?',
+          text: `Xin chào ${displayName}! Tôi là **Trợ lý AI Học tập** của bạn. Bạn muốn tôi giúp giải thích công thức Giải tích, ôn tập Cơ sở Dữ liệu hay tạo dàn ý học tập hôm nay?`,
           timestamp: new Date().toISOString()
         }
       ]);
     }
-  }, [initialSelectedDoc]);
+  }, [initialSelectedDoc, currentUser]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -130,15 +133,15 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
   const selectedDocInfo = documents.find(d => d.id === selectedDocId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-9rem)] bg-white border border-[#e0e3e7] rounded-xl overflow-hidden select-none">
+    <div className="flex flex-col flex-1 min-h-0 bg-white border border-[#e0e3e7] rounded-xl overflow-hidden select-none">
       
       {/* Top chat controls */}
       <div className="px-6 py-3 bg-white border-b border-[#e0e3e7] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-[#1967d2]" />
           <div>
-            <h3 className="font-semibold text-sm text-[#d3e4fe]">Phòng Hỗ trợ Ôn tập cùng AI</h3>
-            <p className="text-[11px] text-[#c7c4d7]/70">Mô hình: Gemini 3.5 Flash</p>
+            <h3 className="font-semibold text-sm text-slate-800">Phòng Hỗ trợ Ôn tập cùng AI</h3>
+            <p className="text-[11px] text-slate-500">Mô hình: Gemini 3.5 Flash</p>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Bell, Settings, LogOut } from "lucide-react";
+import { Search, Bell, Settings, LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "react-toastify";
 
 interface User {
@@ -15,6 +15,7 @@ interface TopbarProps {
   title?: string;
   user?: User;
   onLogout?: () => void;
+  onViewProfile?: () => void;
 }
 
 const Topbar: React.FC<TopbarProps> = ({
@@ -23,6 +24,7 @@ const Topbar: React.FC<TopbarProps> = ({
   title,
   user,
   onLogout,
+  onViewProfile,
 }) => {
   const [notifications, setNotifications] = useState(3);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -94,13 +96,25 @@ const Topbar: React.FC<TopbarProps> = ({
 
           {/* User Menu Dropdown */}
           {showUserMenu && onLogout && (
-            <div className="absolute top-full right-0 mt-2 bg-white border border-[#e0e3e7] rounded-lg shadow-lg z-50 min-w-[180px]">
+            <div className="absolute top-full right-0 mt-2 bg-white border border-[#e0e3e7] rounded-lg shadow-lg z-50 min-w-[180px] py-1">
+              {onViewProfile && (
+                <button
+                  onClick={() => {
+                    onViewProfile();
+                    setShowUserMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-[#3c4043] hover:bg-[#f1f3f4] transition-colors text-sm font-medium border-b border-[#e0e3e7]/50 text-left cursor-pointer"
+                >
+                  <UserIcon className="w-4 h-4 text-[#5f6368]" />
+                  Trang cá nhân
+                </button>
+              )}
               <button
                 onClick={() => {
                   onLogout();
                   setShowUserMenu(false);
                 }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium first:rounded-t-lg last:rounded-b-lg"
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium text-left cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 Đăng xuất
