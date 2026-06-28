@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StudyDocument } from '../types';
-import { AuthUser } from '../types/auth';
+import { StudyDocument } from '@/types';
+import { AuthUser } from '@/types/auth';
 import {
   Folder,
   FileText,
@@ -40,9 +40,9 @@ import {
   createDocumentShareLink,
   type FetchDocumentsMeta,
   type BackendCategory
-} from '../services/documentsApi';
-import CustomDialog from './ui/CustomDialog';
-import ShareModal from './modals/ShareModal';
+} from '@/services/documentsApi';
+import CustomDialog from '@/components/ui/CustomDialog';
+import ShareModal from '@/components/modals/ShareModal';
 
 interface DocumentsViewProps {
   documents: StudyDocument[];
@@ -201,13 +201,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       const isFolder = type === 'folder';
       const dropdownWidth = isFolder ? 176 : 192;
       const dropdownHeight = isFolder ? 120 : 240;
-      
+
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUpward = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
-      
+
       const top = openUpward ? rect.top - dropdownHeight - 6 : rect.bottom + 6;
       const left = rect.right - dropdownWidth;
-      
+
       setDropdownCoords({ top, left });
       setOpenDropdownId(id);
     }
@@ -782,9 +782,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           {apiError}
         </div>
       )}
-
       {/* 4. Display Layouts */}
-      {!apiLoading && filteredDocs.length === 0 && filteredFolders.length === 0 ? (
+      {!apiLoading && !apiError && filteredDocs.length === 0 && filteredFolders.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-[#e0e3e7]">
           <Search className="w-10 h-10 text-[#dadce0] mx-auto mb-3" />
           <p className="text-sm text-[#5f6368] font-medium">Không tìm thấy tài liệu nào.</p>
@@ -815,8 +814,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       key={fol.id}
                       onClick={(e) => handleSelect(e, fol.id, 'folder')}
                       className={`border rounded-xl p-3.5 flex items-center justify-between group cursor-pointer transition-all duration-150 ${isSelected
-                          ? 'bg-[#e8f0fe] border-[#1967d2] shadow-sm'
-                          : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe] hover:shadow-xs'
+                        ? 'bg-[#e8f0fe] border-[#1967d2] shadow-sm'
+                        : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe] hover:shadow-xs'
                         }`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
@@ -912,8 +911,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         onOpenAIOverlay(doc);
                       }}
                       className={`border rounded-xl flex flex-col group transition-all duration-150 cursor-pointer relative ${isSelected
-                          ? 'bg-[#e8f0fe] border-[#1967d2] shadow-sm'
-                          : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe] hover:shadow-md'
+                        ? 'bg-[#e8f0fe] border-[#1967d2] shadow-sm'
+                        : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe] hover:shadow-md'
                         }`}
                     >
                       {/* Document Preview Thumbnail */}
@@ -1372,8 +1371,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                   key={p}
                   onClick={() => setPage(p)}
                   className={`w-8 h-8 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${p === page
-                      ? 'bg-[#1967d2] text-white border-[#1967d2]'
-                      : 'bg-white text-[#5f6368] border-[#e0e3e7] hover:bg-[#eceff1]'
+                    ? 'bg-[#1967d2] text-white border-[#1967d2]'
+                    : 'bg-white text-[#5f6368] border-[#e0e3e7] hover:bg-[#eceff1]'
                     }`}
                 >
                   {p}

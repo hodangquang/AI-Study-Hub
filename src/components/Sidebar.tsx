@@ -20,43 +20,41 @@ import {
   Link,
   RefreshCw
 } from 'lucide-react';
-import CustomDialog from './ui/CustomDialog';
-import { resolveShareToken, uploadDocumentFile } from '../services/documentsApi';
+import { resolveShareToken, uploadDocumentFile } from '@/services/documentsApi';
+import CustomDialog from '@/components/ui/CustomDialog';
 import { toast } from 'react-toastify';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onLogout: () => void;
   openUploadModal: () => void;
-  onLogout?: () => void;
-  storageUsed: number; // in GB
-  storageTotal: number; // in GB
-  folders?: any[];
+  storageQuota: {
+    usedBytes: number;
+    totalBytes: number;
+    plan: string;
+  } | null;
+  folders: any[];
   onImportSuccess?: (newDoc: any) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  activeTab, 
-  setActiveTab, 
-  openUploadModal,
+const Sidebar: React.FC<SidebarProps> = ({
+  activeTab,
+  setActiveTab,
   onLogout,
-  storageUsed,
-  storageTotal,
-  folders = [],
+  openUploadModal,
+  storageQuota,
+  folders,
   onImportSuccess
 }) => {
-  const navItems = [
-    { id: 'home', label: 'Trang chủ', icon: Home },
-    { id: 'documents', label: 'Tài liệu', icon: FileText },
-    { id: 'groups', label: 'Nhóm học tập', icon: Users },
-    { id: 'chatbot', label: 'AI Chatbot', icon: Bot },
-    { id: 'favorites', label: 'Yêu thích', icon: Star },
-    { id: 'trash', label: 'Thùng rác', icon: Trash2 },
-  ];
-
-  const storagePercentage = (storageUsed / storageTotal) * 100;
   const [showNewMenu, setShowNewMenu] = useState(false);
-  const newMenuRef = useRef<HTMLDivElement>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [targetFolderId, setTargetFolderId] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState('');
+
+  // Dialog config
   const [dialogConfig, setDialogConfig] = useState<{
     title: string;
     message?: string;
@@ -69,13 +67,31 @@ const Sidebar: React.FC<SidebarProps> = ({
     onConfirm: (value: string) => void;
   } | null>(null);
 
-  // Share link import states
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [shareLink, setShareLink] = useState('');
-  const [targetFolderId, setTargetFolderId] = useState('');
-  const [importLoading, setImportLoading] = useState(false);
-  const [importError, setImportError] = useState('');
+  const newMenuRef = useRef<HTMLDivElement>(null);
 
+  // Storage calculation helpers
+  const storageUsed = storageQuota?.usedBytes ?? 0;
+  const storageTotal = storageQuota?.totalBytes ?? 524288000; // default 500MB
+  const storagePercentage = Math.min((storageUsed / storageTotal) * 100, 100);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const navItems = [
+    { id: 'home', label: 'Trang chủ', icon: Home },
+    { id: 'documents', label: 'Tài liệu', icon: FileText },
+    { id: 'groups', label: 'Nhóm học tập', icon: Users },
+    { id: 'chatbot', label: 'AI Chatbot', icon: Bot },
+    { id: 'favorites', label: 'Yêu thích', icon: Star },
+    { id: 'trash', label: 'Thùng rác', icon: Trash2 },
+  ];
+
+  // Close brand new dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
@@ -87,15 +103,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [showNewMenu]);
 
   return (
-    <aside className="w-[260px] h-screen fixed left-0 top-0 bg-[#102034] border-r border-[#464554]/50 flex flex-col p-4 z-50 overflow-y-auto select-none">
+    <aside className="w-[260px] h-screen fixed left-0 top-0 bg-white border-r border-slate-200 flex flex-col p-4 z-50 overflow-y-auto select-none shadow-sm">
       {/* Brand Header */}
       <div className="flex items-center gap-3 px-1 py-4 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-[#8083ff] flex items-center justify-center shadow-lg shadow-[#8083ff]/20">
-          <BookOpen className="text-[#0d0096] w-5 h-5 font-bold" />
+        <div className="w-10 h-10 rounded-xl bg-[#1967d2] flex items-center justify-center shadow-lg shadow-[#1967d2]/15">
+          <BookOpen className="text-white w-5 h-5 font-bold" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-[#d3e4fe] tracking-tight">AI Study Hub</h1>
-          <p className="text-xs text-[#c7c4d7]">Hệ thống học tập</p>
+          <h1 className="text-lg font-bold text-slate-800 tracking-tight">AI Study Hub</h1>
+          <p className="text-xs text-slate-500">Hệ thống học tập</p>
         </div>
       </div>
 
@@ -103,16 +119,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="relative mb-5" ref={newMenuRef}>
         <button
           onClick={() => setShowNewMenu(!showNewMenu)}
-          className="w-full bg-[#102034] hover:bg-[#1b2b3f] text-[#d3e4fe] font-medium rounded-2xl py-3 px-5 flex items-center gap-3 transition-all duration-200 shadow-[0_1px_6px_rgba(0,0,0,0.28)] hover:shadow-[0_1px_8px_rgba(0,0,0,0.40)] border border-[#464554]/40 cursor-pointer text-sm"
+          className="w-full bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 shadow-sm rounded-2xl py-3 px-5 flex items-center gap-3 transition-all duration-200 cursor-pointer text-sm"
         >
-          <Plus className="w-5 h-5 text-[#d3e4fe]" />
-          <span className="font-semibold">Mới</span>
-          <ChevronDown className={`w-4 h-4 ml-auto text-[#c7c4d7] transition-transform duration-200 ${showNewMenu ? 'rotate-180' : ''}`} />
+          <Plus className="w-5 h-5 text-indigo-600" />
+          <span>Mới</span>
+          <ChevronDown className={`w-4 h-4 ml-auto text-slate-400 transition-transform duration-200 ${showNewMenu ? 'rotate-180' : ''}`} />
         </button>
 
         {/* Dropdown */}
         {showNewMenu && (
-          <div className="absolute left-0 top-full mt-2 w-56 bg-[#1b2b3f] border border-[#464554]/50 rounded-xl shadow-2xl shadow-black/40 z-50 py-1.5 overflow-hidden">
+          <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-1.5 overflow-hidden animate-fade-in">
             {/* New Folder */}
             <button
               onClick={() => {
@@ -129,13 +145,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }
                 });
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#d3e4fe] hover:bg-[#26364a] transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left font-medium"
             >
-              <FolderPlus className="w-5 h-5 text-[#ffb783] flex-shrink-0" />
+              <FolderPlus className="w-5 h-5 text-amber-500 flex-shrink-0" />
               <span>Thư mục mới</span>
             </button>
 
-            <div className="mx-3 my-1.5 border-t border-[#464554]/40" />
+            <div className="mx-3 my-1.5 border-t border-slate-100" />
 
             {/* File Upload */}
             <button
@@ -143,9 +159,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 setShowNewMenu(false);
                 openUploadModal();
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#d3e4fe] hover:bg-[#26364a] transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left font-medium"
             >
-              <FileUp className="w-5 h-5 text-[#c0c1ff] flex-shrink-0" />
+              <FileUp className="w-5 h-5 text-indigo-600 flex-shrink-0" />
               <span>Tải tệp lên</span>
             </button>
 
@@ -154,14 +170,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => {
                 setShowNewMenu(false);
                 setShowImportModal(true);
-                // Set default folder selection to the first folder if available
                 if (folders.length > 0) {
                   setTargetFolderId(folders[0].id);
                 } else {
                   setTargetFolderId('');
                 }
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#d3e4fe] hover:bg-[#26364a] transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left font-medium"
             >
               <Link className="w-5 h-5 text-[#8083ff] flex-shrink-0" />
               <span>Nhập từ liên kết chia sẻ</span>
@@ -173,9 +188,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 setShowNewMenu(false);
                 toast.info('Tính năng tải thư mục lên sắp ra mắt!');
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-[#d3e4fe] hover:bg-[#26364a] transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left font-medium"
             >
-              <FolderUp className="w-5 h-5 text-[#c0c1ff] flex-shrink-0" />
+              <FolderUp className="w-5 h-5 text-indigo-600 flex-shrink-0" />
               <span>Tải thư mục lên</span>
             </button>
           </div>
@@ -205,22 +220,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Bottom Actions and Storage Limit */}
-      <div className="mt-auto pt-4 flex flex-col gap-2 border-t border-[#464554]/30">
+      <div className="mt-auto pt-4 flex flex-col gap-2 border-t border-slate-100">
         {/* Storage Info */}
-        <div className="px-3 py-2 mb-2 bg-[#0b1c30]/50 rounded-lg border border-[#464554]/10">
+        <div className="px-3 py-2 mb-2 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
           <div className="flex justify-between items-center mb-1.5">
-            <span className="text-xs text-[#c7c4d7] font-medium">Bộ nhớ lưu trữ</span>
-            <span className="text-xs text-[#c7c4d7] font-semibold">{storageUsed}GB / {storageTotal}GB</span>
+            <span className="text-xs text-slate-500 font-medium">Bộ nhớ lưu trữ</span>
+            <span className="text-xs text-slate-700 font-semibold">{formatBytes(storageUsed)} / {formatBytes(storageTotal)}</span>
           </div>
-          <div className="w-full bg-[#1b2b3f] h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
             <div 
-              className="bg-[#c0c1ff] h-full rounded-full transition-all duration-500" 
+              className="bg-indigo-600 h-full rounded-full transition-all duration-500" 
               style={{ width: `${storagePercentage}%` }}
             ></div>
           </div>
         </div>
-
       </div>
+
       {dialogConfig && (
         <CustomDialog
           isOpen={dialogConfig !== null}
@@ -237,18 +252,18 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {showImportModal && (
-        <div className="fixed inset-0 z-[100] overflow-y-auto flex items-center justify-center p-4 text-[#d3e4fe]">
-          <div onClick={() => !importLoading && setShowImportModal(false)} className="absolute inset-0 bg-[#000f21]/78 backdrop-blur-xs" />
+        <div className="fixed inset-0 z-[100] overflow-y-auto flex items-center justify-center p-4">
+          <div onClick={() => !importLoading && setShowImportModal(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs" />
           
-          <div className="relative bg-[#102034] border border-[#464554]/60 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl z-10">
+          <div className="relative bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl z-10 animate-fade-in">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-[#464554]/40 flex items-center justify-between">
-              <h3 className="font-bold text-lg text-[#d3e4fe]">Nhập từ liên kết chia sẻ</h3>
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-lg text-slate-800">Nhập từ liên kết chia sẻ</h3>
               <button 
                 type="button" 
                 disabled={importLoading}
                 onClick={() => setShowImportModal(false)}
-                className="text-[#c7c4d7] hover:text-[#d3e4fe] p-1.5 rounded-full hover:bg-[#26364a] disabled:opacity-50 cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 disabled:opacity-50 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -261,17 +276,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               setImportLoading(true);
               setImportError('');
               try {
-                // 1. Extract token
                 const trimmed = shareLink.trim();
                 let token = trimmed;
                 if (trimmed.includes('/shared/')) {
                   token = trimmed.split('/shared/').pop()?.split('?')[0] || trimmed;
                 }
                 
-                // 2. Resolve share link
                 const sharedDoc = await resolveShareToken(token);
-                
-                // 3. Download the document blob
                 const fileRes = await fetch(sharedDoc.downloadUrl);
                 if (!fileRes.ok) throw new Error('Không thể tải xuống tệp tin chia sẻ từ máy chủ.');
                 const blob = await fileRes.blob();
@@ -282,7 +293,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   type: blob.type
                 });
                 
-                // 4. Upload it under the user's account in chosen category
                 const newDoc = await uploadDocumentFile(
                   file,
                   fileTitle,
@@ -308,18 +318,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               
               {importLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                  <RefreshCw className="w-10 h-10 text-[#c0c1ff] animate-spin" />
+                  <RefreshCw className="w-10 h-10 text-indigo-600 animate-spin" />
                   <div className="text-center">
-                    <p className="text-sm font-bold text-[#d3e4fe]">Đang nhập tài liệu chia sẻ...</p>
-                    <p className="text-xs text-[#c7c4d7] mt-1">Hệ thống đang tải dữ liệu và phân tích AI.</p>
+                    <p className="text-sm font-bold text-slate-800">Đang nhập tài liệu chia sẻ...</p>
+                    <p className="text-xs text-slate-500 mt-1">Hệ thống đang tải dữ liệu và phân tích AI.</p>
                   </div>
                 </div>
               ) : (
                 <>
                   {/* Share link input */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#c7c4d7]/90 mb-1.5 uppercase tracking-wider">
-                      Liên kết hoặc mã chia sẻ <span className="text-red-400">*</span>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">
+                      Liên kết hoặc mã chia sẻ <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -327,17 +337,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                       value={shareLink}
                       onChange={(e) => setShareLink(e.target.value)}
                       placeholder="Ví dụ: sds hoặc https://.../shared/sds"
-                      className="w-full bg-[#1b2b3f] border border-[#464554]/60 rounded-xl py-2.5 px-4 text-sm text-[#d3e4fe] placeholder:text-[#c7c4d7]/50 focus:outline-none focus:border-[#c0c1ff]"
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25"
                     />
                   </div>
 
                   {/* Folder category selection */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#c7c4d7]/90 mb-1.5 uppercase tracking-wider">
-                      Lưu vào thư mục <span className="text-red-400">*</span>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">
+                      Lưu vào thư mục <span className="text-red-500">*</span>
                     </label>
                     {folders.length === 0 ? (
-                      <div className="w-full bg-[#1b2b3f] border border-amber-500/40 rounded-xl py-2.5 px-4 text-sm text-amber-400">
+                      <div className="w-full bg-amber-50 border border-amber-100 rounded-xl py-2.5 px-4 text-sm text-amber-600">
                         Chưa có thư mục nào được tạo. Tài liệu sẽ lưu vào Lưu trữ chung.
                       </div>
                     ) : (
@@ -345,7 +355,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         required
                         value={targetFolderId}
                         onChange={(e) => setTargetFolderId(e.target.value)}
-                        className="w-full bg-[#1b2b3f] border border-[#464554]/60 rounded-xl py-2.5 px-4 text-sm text-[#d3e4fe] focus:outline-none focus:border-[#c0c1ff]"
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25"
                       >
                         <option value="">Lưu trữ chung (Không gắn thư mục)</option>
                         {folders.map((fol) => (
@@ -359,25 +369,25 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                   {/* Error display */}
                   {importError && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-xs text-red-400">
+                    <div className="bg-red-55 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-600">
                       Lỗi: {importError}
                     </div>
                   )}
 
                   {/* Footer actions */}
-                  <div className="pt-4 border-t border-[#464554]/30 flex justify-end gap-3">
+                  <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
                     <button
                       type="button"
                       disabled={importLoading}
                       onClick={() => setShowImportModal(false)}
-                      className="bg-transparent hover:bg-[#26364a] text-[#c7c4d7] hover:text-[#d3e4fe] font-semibold py-2 px-4 rounded-xl text-sm transition-colors cursor-pointer"
+                      className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 rounded-xl text-sm transition-all border border-slate-200 cursor-pointer shadow-sm"
                     >
                       Hủy bỏ
                     </button>
                     <button
                       type="submit"
                       disabled={!shareLink.trim() || importLoading}
-                      className="bg-[#c0c1ff] hover:bg-[#e1e0ff] disabled:opacity-50 disabled:cursor-not-allowed text-[#1000a9] font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md cursor-pointer"
+                      className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
                     >
                       Nhập tài liệu
                     </button>

@@ -5,8 +5,8 @@ import {
   registerInitialValues,
   registerValidationSchema,
   type RegisterFormValues,
-} from "../validation/authSchemas";
-import { AuthField, AuthCheckboxField } from "./auth/AuthField";
+} from "@/validation/authSchemas";
+import { AuthField, AuthCheckboxField } from "@/components/auth/AuthField";
 
 interface RegisterViewProps {
   onRegister: (user: {
@@ -33,8 +33,8 @@ export default function RegisterView({
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-[#f8fafd] flex justify-center px-4 py-6 items-center">
-      <div className="w-full max-w-3xl bg-white border border-slate-200/80 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafd] flex justify-center px-4 py-8 md:py-12 items-start">
+      <div className="w-full max-w-3xl bg-white border border-slate-200/80 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden my-auto">
         <div className="w-full md:w-1/2 h-48 md:h-auto md:self-stretch relative overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2000"
@@ -44,7 +44,7 @@ export default function RegisterView({
           />
         </div>
 
-        <div className="w-full md:w-1/2 p-5 md:p-6 flex flex-col justify-center overflow-y-auto max-h-full">
+        <div className="w-full md:w-1/2 p-5 md:p-6 flex flex-col justify-center">
           <div className="w-full max-w-sm mx-auto">
             <h2 className="text-xl font-bold text-[#202124] mb-0.5">
               Tạo tài khoản

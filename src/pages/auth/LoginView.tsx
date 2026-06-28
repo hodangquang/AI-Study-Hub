@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Formik, Form } from "formik";
 import { Mail, Lock, Eye, EyeOff, Chrome, Github, Loader2 } from "lucide-react";
-import { loginAccount } from "../services/authApi";
-import type { AuthSession } from "../types/auth";
+import { loginAccount } from "@/services/authApi";
+import type { AuthSession } from "@/types/auth";
 import {
   loginInitialValues,
   loginValidationSchema,
   type LoginFormValues,
-} from "../validation/authSchemas";
-import { AuthField } from "./auth/AuthField";
+} from "@/validation/authSchemas";
+import { AuthField } from "@/components/auth/AuthField";
 
 interface LoginViewProps {
   onLogin: (session: AuthSession) => void;
@@ -40,8 +40,8 @@ export default function LoginView({
   };
 
   return (
-    <div className="min-h-screen bg-[#031427] flex justify-center px-4 py-10 items-start md:items-center">
-      <div className="w-full max-w-5xl bg-slate-900/50 border border-slate-700/50 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafd] flex justify-center px-4 py-8 md:py-12 items-start">
+      <div className="w-full max-w-5xl bg-white border border-slate-200/80 rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-hidden my-auto">
         <div className="w-full md:w-1/2 h-48 md:h-auto md:self-stretch relative overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2000"
@@ -53,8 +53,8 @@ export default function LoginView({
 
         <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
-            <h2 className="text-3xl font-bold text-white mb-2">Đăng nhập</h2>
-            <p className="text-slate-400 mb-8">
+            <h2 className="text-3xl font-bold text-slate-800 mb-2">Đăng nhập</h2>
+            <p className="text-slate-500 mb-8">
               Chào mừng bạn quay trở lại AI Study Hub!
             </p>
 
@@ -67,7 +67,7 @@ export default function LoginView({
             >
               {(formik) => (
                 <Form className="space-y-4" noValidate>
-                  <AuthField
+                   <AuthField
                     formik={formik}
                     name="email"
                     label="Email"
@@ -77,42 +77,40 @@ export default function LoginView({
                     icon={<Mail className="w-5 h-5" />}
                   />
 
-                  <div>
-                    <div className="flex justify-end mb-1">
+                  <AuthField
+                    formik={formik}
+                    name="password"
+                    label="Mật khẩu"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    icon={<Lock className="w-5 h-5" />}
+                    labelRight={
                       <button
                         type="button"
                         className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
                       >
                         Quên mật khẩu?
                       </button>
-                    </div>
-                    <AuthField
-                      formik={formik}
-                      name="password"
-                      label="Mật khẩu"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      autoComplete="current-password"
-                      icon={<Lock className="w-5 h-5" />}
-                      rightElement={
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="text-slate-500 hover:text-slate-300 transition-colors"
-                          tabIndex={-1}
-                          aria-label={
-                            showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
-                          }
-                        >
-                          {showPassword ? (
-                            <EyeOff className="w-5 h-5" />
-                          ) : (
-                            <Eye className="w-5 h-5" />
-                          )}
-                        </button>
-                      }
-                    />
-                  </div>
+                    }
+                    rightElement={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-500 hover:text-slate-300 transition-colors"
+                        tabIndex={-1}
+                        aria-label={
+                          showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                    }
+                  />
 
                   {apiError && (
                     <div
@@ -171,12 +169,12 @@ export default function LoginView({
               </button>
             </div>
 
-            <div className="mt-8 text-center text-slate-400">
+            <div className="mt-8 text-center text-slate-500">
               Chưa có tài khoản?{" "}
               <button
                 type="button"
                 onClick={onSwitchToRegister}
-                className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors cursor-pointer"
               >
                 Đăng ký ngay
               </button>

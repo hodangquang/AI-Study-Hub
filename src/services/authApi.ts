@@ -3,7 +3,16 @@ import type {
   ApiUser,
   AuthSession,
   LoginResponse,
+  UserProfile,
+  UserProfileResponse,
+  UpdateProfilePayload,
+  UpdateProfileResponse,
+  StorageQuotaResponse,
+  UserStorageInfo,
+  ChangePasswordPayload,
+  ChangePasswordResponse,
 } from "../types/auth";
+import { getAuthHeaders, handleUnauthorized } from "../lib/authStorage";
 
 /** Dev: để trống → Vite proxy `/account`. Production: set VITE_API_URL trong .env */
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
@@ -77,4 +86,121 @@ export async function loginAccount(
     tokenType: success.data.tokenType,
     expiresIn: success.data.expiresIn,
   };
+}
+
+export async function getCurrentUserProfile(): Promise<UserProfile> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl("/users/me"), {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      ...headers,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+    const errBody = (await response.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(errBody.message ?? "Không thể lấy thông tin hồ sơ cá nhân.");
+  }
+
+  const success = (await response.json()) as UserProfileResponse;
+  return {
+    ...success.data,
+    avatarUrl: resolveAvatarUrl(success.data.avatarUrl, success.data.fullName),
+  };
+}
+
+export async function updateUserProfile(
+  payload: { fullName: string; username: string; avatarFile?: File }
+): Promise<UpdateProfileResponse["data"]> {
+  const headers = getAuthHeaders();
+  const { "Content-Type": _, ...authHeaders } = headers as any;
+
+  let body: any;
+  let requestHeaders: any = {
+    accept: "application/json",
+    ...authHeaders,
+  };
+
+  if (payload.avatarFile) {
+    const formData = new FormData();
+    formData.append("fullName", payload.fullName);
+    formData.append("username", payload.username);
+    formData.append("avatar", payload.avatarFile);
+    body = formData;
+  } else {
+    body = JSON.stringify({
+      fullName: payload.fullName,
+      username: payload.username,
+    });
+    requestHeaders["Content-Type"] = "application/json";
+  }
+
+  const response = await fetch(apiUrl("/users/me"), {
+    method: "PUT",
+    headers: requestHeaders,
+    body: body,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+    const errBody = (await response.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(errBody.message ?? "Không thể cập nhật hồ sơ cá nhân.");
+  }
+
+  const success = (await response.json()) as UpdateProfileResponse;
+  return {
+    ...success.data,
+    avatarUrl: resolveAvatarUrl(success.data.avatarUrl, success.data.fullName),
+  };
+}
+
+export async function getCurrentUserStorageQuota(): Promise<UserStorageInfo> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl("/users/me/storage"), {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      ...headers,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+    const errBody = (await response.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(errBody.message ?? "Không thể lấy thông tin hạn mức bộ nhớ.");
+  }
+
+  const success = (await response.json()) as StorageQuotaResponse;
+  return success.data;
+}
+
+export async function changeUserPassword(
+  payload: ChangePasswordPayload
+): Promise<void> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl("/users/me/password"), {
+    method: "PUT",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+    const errBody = (await response.json().catch(() => ({}))) as ApiErrorBody;
+    throw new Error(errBody.message ?? "Không thể thay đổi mật khẩu.");
+  }
 }

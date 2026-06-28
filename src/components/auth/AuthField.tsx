@@ -12,6 +12,7 @@ type AuthFieldProps<T extends Record<string, unknown>> = {
   disabled?: boolean;
   rightElement?: ReactNode;
   hint?: string;
+  labelRight?: ReactNode;
 };
 
 export function AuthField<T extends Record<string, unknown>>({
@@ -25,6 +26,7 @@ export function AuthField<T extends Record<string, unknown>>({
   disabled,
   rightElement,
   hint,
+  labelRight,
 }: AuthFieldProps<T>) {
   const touched = formik.touched[name as keyof typeof formik.touched];
   const error = formik.errors[name as keyof typeof formik.errors];
@@ -33,12 +35,15 @@ export function AuthField<T extends Record<string, unknown>>({
 
   return (
     <div>
-      <label
-        htmlFor={name}
-        className="block text-sm font-medium text-slate-300 mb-1.5"
-      >
-        {label}
-      </label>
+      <div className="flex justify-between items-center mb-1.5">
+        <label
+          htmlFor={name}
+          className="block text-sm font-medium text-slate-700"
+        >
+          {label}
+        </label>
+        {labelRight}
+      </div>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
           {icon}
@@ -55,10 +60,10 @@ export function AuthField<T extends Record<string, unknown>>({
           onBlur={formik.handleBlur}
           aria-invalid={hasError}
           aria-describedby={hasError ? `${name}-error` : hint ? `${name}-hint` : undefined}
-          className={`w-full pl-10 pr-10 py-2.5 bg-slate-800/60 border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all disabled:opacity-60 ${
+          className={`w-full pl-10 pr-10 py-2.5 bg-white border rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all disabled:opacity-60 ${
             hasError
               ? "border-red-500/70 focus:border-red-500 focus:ring-red-500/20"
-              : "border-slate-700 focus:border-indigo-500 focus:ring-indigo-500/20"
+              : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20"
           }`}
         />
         {rightElement && (

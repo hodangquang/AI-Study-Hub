@@ -1,7 +1,7 @@
 import React from 'react';
-import { StudyDocument } from '../types';
+import { StudyDocument } from '@/types';
 import { Star, FileText, ArrowUpDown, Filter, HelpCircle, PlusCircle } from 'lucide-react';
-import { unbookmarkDocumentOnBackend } from '../services/documentsApi';
+import { unbookmarkDocumentOnBackend } from '@/services/documentsApi';
 import { toast } from 'react-toastify';
 
 interface FavoritesViewProps {
