@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Bell, Settings, LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "react-toastify";
+import NotificationPanel from "./NotificationPanel";
+import { getMyNotifications } from "../services/notificationService";
 
 interface User {
   fullName: string;
@@ -27,7 +29,25 @@ const Topbar: React.FC<TopbarProps> = ({
   onViewProfile,
 }) => {
   const [notifications, setNotifications] = useState(3);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await getMyNotifications({ isRead: false, limit: 1 });
+        if (!mounted) return;
+        setUnreadCount(res.meta?.unreadCount ?? 0);
+      } catch (err: any) {
+        // ignore silently
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <header className="h-16 flex items-center justify-between px-8 bg-white border-b border-[#e0e3e7] sticky top-0 z-40 select-none">
@@ -48,21 +68,19 @@ const Topbar: React.FC<TopbarProps> = ({
       {/* Right User Bar */}
       <div className="flex items-center gap-4">
         {/* Notification Bell */}
-        <button
-          onClick={() => {
-            toast.info(
-              'Bạn có 3 thông báo mới: \n1. Tài liệu "Đề cương ôn tập.docx" đã xử lý xong.\n2. Bạn vừa được thêm vào Nhóm Marketing.\n3. Giáo viên cập nhật slide mới.'
-            );
-            setNotifications(0);
-          }}
-          className="relative w-10 h-10 flex items-center justify-center text-[#5f6368] hover:bg-[#eceff1] hover:text-[#202124] rounded-full transition-all duration-200 cursor-pointer"
-          title="Thông báo"
-        >
-          <Bell className="w-5 h-5" />
-          {notifications > 0 && (
-            <span className="absolute top-2 right-2 w-2 h-2 bg-[#f28b82] rounded-full ring-2 ring-white animate-pulse"></span>
-          )}
-        </button>
+        <>
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="relative w-10 h-10 flex items-center justify-center text-[#5f6368] hover:bg-[#eceff1] hover:text-[#202124] rounded-full transition-all duration-200 cursor-pointer"
+            title="Thông báo"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-[#f28b82] rounded-full ring-2 ring-white animate-pulse"></span>
+            )}
+          </button>
+          <NotificationPanel visible={showNotifications} onClose={() => setShowNotifications(false)} />
+        </>
 
         {/* Settings shortcut */}
         <button

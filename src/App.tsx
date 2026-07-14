@@ -12,6 +12,7 @@ import HomeView from "@/pages/home/HomeView";
 import DocumentsView from "@/pages/documents/DocumentsView";
 import GroupsView from "@/pages/groups/GroupsView";
 import FavoritesView from "@/pages/favorites/FavoritesView";
+
 import ChatbotView from "@/pages/chatbot/ChatbotView";
 import AIDocumentOverlay from "@/components/AIDocumentOverlay";
 import UploadModal from "@/components/UploadModal";
@@ -280,12 +281,10 @@ export default function App() {
             currentUser={user}
           />
         );
+      case "bookmarks":
       case "favorites":
         return (
           <FavoritesView
-            documents={documents}
-            setDocuments={setDocuments}
-            searchQuery={searchQuery}
             setActiveTab={setActiveTab}
             onOpenAIOverlay={(doc) => setSelectedDocForAI(doc)}
           />
