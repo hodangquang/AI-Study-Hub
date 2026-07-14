@@ -38,11 +38,18 @@ import {
   fetchCategories,
   updateDocumentMetadata,
   createDocumentShareLink,
+  renameFolderOnBackend,
+  deleteFolderOnBackend,
+  fetchFolderContents,
+  fetchFolderBreadcrumb,
+  moveFolderOnBackend,
   type FetchDocumentsMeta,
   type BackendCategory
 } from '@/services/documentsApi';
 import CustomDialog from '@/components/ui/CustomDialog';
 import ShareModal from '@/components/modals/ShareModal';
+import Loader from '@/components/Loader';
+import MoveFolderModal from '@/components/modals/MoveFolderModal';
 
 interface DocumentsViewProps {
   documents: StudyDocument[];
@@ -53,6 +60,8 @@ interface DocumentsViewProps {
   onOpenAIOverlay: (doc: StudyDocument) => void;
   openUploadModal: () => void;
   currentUser: AuthUser | null;
+  currentFolderId: string | null;
+  setCurrentFolderId: (id: string | null) => void;
 }
 
 interface MockFolder {
@@ -71,7 +80,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   setFolders,
   onOpenAIOverlay,
   openUploadModal,
-  currentUser
+  currentUser,
+  currentFolderId,
+  setCurrentFolderId
 }) => {
 
   // Layout state
@@ -101,6 +112,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   // Download in-progress state
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [moveFolderTarget, setMoveFolderTarget] = useState<{ id: string; name: string } | null>(null);
   const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
 
   // ─── API-driven filter / sort / page states ────────────────────────────────
@@ -116,6 +128,10 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   const [meta, setMeta] = useState<FetchDocumentsMeta>({ page: 1, limit: PAGE_LIMIT, total: 0, totalPages: 1 });
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+
+  // Folder contents navigation states
+  const [breadcrumbs, setBreadcrumbs] = useState<any[]>([]);
+  const [folderContentsFolders, setFolderContentsFolders] = useState<any[]>([]);
 
   // Categories for filter pill
   const [categories, setCategories] = useState<BackendCategory[]>([]);
@@ -143,26 +159,63 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     setApiLoading(true);
     setApiError('');
     try {
-      const result = await fetchDocumentsWithParams({
-        q: localSearch.trim() || undefined,
-        categoryId: filterCategoryId || undefined,
-        sortBy,
-        order,
-        page,
-        limit: PAGE_LIMIT,
-      });
-      setFilteredDocs(result.docs);
-      setMeta(result.meta);
-      // Also propagate to parent so other views stay fresh
-      setDocuments(result.docs);
+      if (currentFolderId) {
+        const [contentsResult, breadcrumbsResult] = await Promise.all([
+          fetchFolderContents({
+            folderId: currentFolderId,
+            q: localSearch.trim() || undefined,
+            sortBy,
+            order,
+          }),
+          fetchFolderBreadcrumb(currentFolderId).catch(() => [])
+        ]);
+        setFilteredDocs(contentsResult.documents);
+        setFolderContentsFolders(contentsResult.folders.map((f, i) => ({
+          id: f.id,
+          name: f.name,
+          owner: 'me',
+          dateModified: 'Vừa tải',
+          size: '—',
+          color: ['#10b981', '#f59e0b', '#ffb783', '#c0c1ff', '#8b5cf6'][i % 5] || '#1967d2',
+          bg: '#f0fdf4',
+          type: 'folder',
+          parentId: f.parentId
+        })));
+        setBreadcrumbs(breadcrumbsResult.length > 0 ? breadcrumbsResult : contentsResult.breadcrumbs);
+        setMeta({ page: 1, limit: PAGE_LIMIT, total: contentsResult.documents.length, totalPages: 1 });
+      } else {
+        const result = await fetchDocumentsWithParams({
+          q: localSearch.trim() || undefined,
+          categoryId: filterCategoryId || undefined,
+          sortBy,
+          order,
+          page,
+          limit: PAGE_LIMIT,
+        });
+        const myDocs = result.docs.filter(doc =>
+          (!currentUser || doc.uploaderId === currentUser.id) &&
+          (localSearch.trim() || !doc.folderId)
+        );
+        setFilteredDocs(myDocs);
+        setMeta({ ...result.meta, total: myDocs.length });
+        setBreadcrumbs([]);
+        setFolderContentsFolders([]);
+        setDocuments(myDocs);
+      }
     } catch (e: any) {
       setApiError(e.message || 'Lỗi khi tải tài liệu.');
     } finally {
-      setApiLoading(false);
+      setTimeout(() => {
+        setApiLoading(false);
+      }, 1000);
     }
-  }, [localSearch, filterCategoryId, sortBy, order, page]);
+  }, [localSearch, filterCategoryId, sortBy, order, page, currentFolderId]);
 
   useEffect(() => { loadDocs(); }, [loadDocs]);
+
+  useEffect(() => {
+    loadDocs();
+  }, [documents.length]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -232,10 +285,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     return `https://ui-avatars.com/api/?name=U&background=8083ff&color=fff`;
   };
 
-  // Folders are still filtered client-side (from parent state)
-  const filteredFolders = folders.filter(fol =>
-    fol.name.toLowerCase().includes(localSearch.toLowerCase())
-  );
+  // Folders are still filtered client-side (from parent state or folder contents)
+  const filteredFolders = currentFolderId
+    ? folderContentsFolders.filter(fol =>
+        fol.name.toLowerCase().includes(localSearch.toLowerCase())
+      )
+    : folders.filter(fol =>
+        fol.name.toLowerCase().includes(localSearch.toLowerCase())
+      );
 
   // State modification synchronizers
   const toggleFavorite = async (e: React.MouseEvent | React.TouchEvent, docId: string) => {
@@ -292,15 +349,40 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       message: 'Bạn có chắc chắn muốn xóa thư mục này?',
       confirmLabel: 'Xóa',
       isDanger: true,
-      onConfirm: () => {
-        setFolders(prev => prev.filter(f => f.id !== folderId));
-        if (selectedItemId === folderId) {
-          setSelectedItemId(null);
-          setSelectedItemType(null);
+      onConfirm: async () => {
+        try {
+          await deleteFolderOnBackend(folderId);
+          setFolders(prev => prev.filter(f => f.id !== folderId));
+          setFolderContentsFolders(prev => prev.filter(f => f.id !== folderId));
+          if (selectedItemId === folderId) {
+            setSelectedItemId(null);
+            setSelectedItemType(null);
+          }
+          if (currentFolderId === folderId || breadcrumbs.some(b => b.id === folderId)) {
+            setCurrentFolderId(null);
+          }
+          toast.success('Xóa thư mục thành công.');
+        } catch (err: any) {
+          console.error(err);
+          toast.error(err.message || 'Không thể xóa thư mục trên máy chủ.');
         }
         setDialogConfig(null);
       }
     });
+  };
+
+  const handleMoveFolderConfirm = async (targetParentId: string | null) => {
+    if (!moveFolderTarget) return;
+    const { id, name } = moveFolderTarget;
+    try {
+      await moveFolderOnBackend(id, targetParentId);
+      toast.success(`Đã di chuyển thư mục "${name}" thành công.`);
+      loadDocs();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Không thể di chuyển thư mục.');
+      throw err;
+    }
   };
 
   const handleShare = (e: React.MouseEvent | React.TouchEvent, doc: StudyDocument) => {
@@ -438,10 +520,21 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           message: `Bạn có chắc muốn xóa thư mục "${name}"?`,
           confirmLabel: 'Xóa',
           isDanger: true,
-          onConfirm: () => {
-            setFolders(prev => prev.filter(f => f.id !== selectedItemId));
-            setSelectedItemId(null);
-            setSelectedItemType(null);
+          onConfirm: async () => {
+            try {
+              await deleteFolderOnBackend(selectedItemId);
+              setFolders(prev => prev.filter(f => f.id !== selectedItemId));
+              setFolderContentsFolders(prev => prev.filter(f => f.id !== selectedItemId));
+              if (currentFolderId === selectedItemId || breadcrumbs.some(b => b.id === selectedItemId)) {
+                setCurrentFolderId(null);
+              }
+              setSelectedItemId(null);
+              setSelectedItemType(null);
+              toast.success('Xóa thư mục thành công.');
+            } catch (err: any) {
+              console.error(err);
+              toast.error(err.message || 'Không thể xóa thư mục trên máy chủ.');
+            }
             setDialogConfig(null);
           }
         });
@@ -564,8 +657,24 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       {/* 1. Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 select-none">
-          <h2 className="text-xl font-semibold text-[#202124] flex items-center gap-1.5 py-1 px-2.5">
-            Tài liệu của tôi
+          <h2 className="text-xl font-semibold text-[#202124] flex items-center gap-1.5 py-1 px-2.5 flex-wrap">
+            <span 
+              className={`cursor-pointer hover:text-[#1967d2] hover:underline transition-colors ${currentFolderId ? 'text-[#5f6368]' : ''}`}
+              onClick={() => setCurrentFolderId(null)}
+            >
+              Tài liệu của tôi
+            </span>
+            {breadcrumbs.map((b) => (
+              <React.Fragment key={b.id}>
+                <span className="text-[#80868b] font-normal mx-1">/</span>
+                <span 
+                  className={`cursor-pointer hover:text-[#1967d2] hover:underline transition-colors ${b.id === currentFolderId ? '' : 'text-[#5f6368]'}`}
+                  onClick={() => setCurrentFolderId(b.id)}
+                >
+                  {b.name}
+                </span>
+              </React.Fragment>
+            ))}
           </h2>
           {meta.total > 0 && (
             <span className="text-xs bg-[#e8f0fe] text-[#1967d2] font-semibold px-2 py-0.5 rounded-full">
@@ -757,7 +866,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
             {/* Move to folder action */}
             <button
-              onClick={() => toast.info('Tính năng di chuyển thư mục/tệp sắp được phát triển.')}
+              onClick={() => {
+                if (selectedItemType === 'folder') {
+                  setMoveFolderTarget({ id: selectedItemId, name: getSelectedName() });
+                } else {
+                  toast.info('Tính năng di chuyển tệp đang được phát triển.');
+                }
+              }}
               className="p-2 rounded-full hover:bg-[#dbeafe] text-[#1967d2] transition-colors cursor-pointer"
               title="Di chuyển"
             >
@@ -797,7 +912,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         </div>
       ) : apiLoading ? (
         <div className="flex items-center justify-center py-20">
-          <RefreshCw className="w-8 h-8 text-[#1967d2] animate-spin" />
+          <Loader />
         </div>
       ) : layoutMode === 'grid' ? (
         /* ======================== GRID MODE ======================== */
@@ -813,6 +928,10 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     <div
                       key={fol.id}
                       onClick={(e) => handleSelect(e, fol.id, 'folder')}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentFolderId(fol.id);
+                      }}
                       className={`border rounded-xl p-3.5 flex items-center justify-between group cursor-pointer transition-all duration-150 ${isSelected
                         ? 'bg-[#e8f0fe] border-[#1967d2] shadow-sm'
                         : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe] hover:shadow-xs'
@@ -846,7 +965,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toast.info(`Đang mở thư mục: ${fol.name}`);
+                                setCurrentFolderId(fol.id);
                                 closeDropdown();
                               }}
                               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#202124] hover:bg-[#f1f3f4] transition-colors"
@@ -864,9 +983,18 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                   defaultValue: fol.name,
                                   inputPlaceholder: 'Nhập tên mới cho thư mục',
                                   confirmLabel: 'OK',
-                                  onConfirm: (newName) => {
+                                  onConfirm: async (newName) => {
                                     if (newName.trim()) {
-                                      setFolders(prev => prev.map(f => f.id === fol.id ? { ...f, name: newName.trim() } : f));
+                                      try {
+                                        await renameFolderOnBackend(fol.id, newName.trim());
+                                        setFolders(prev => prev.map(f => f.id === fol.id ? { ...f, name: newName.trim() } : f));
+                                        setFolderContentsFolders(prev => prev.map(f => f.id === fol.id ? { ...f, name: newName.trim() } : f));
+                                        setBreadcrumbs(prev => prev.map(b => b.id === fol.id ? { ...b, name: newName.trim() } : b));
+                                        toast.success('Đổi tên thư mục thành công.');
+                                      } catch (err: any) {
+                                        console.error(err);
+                                        toast.error(err.message || 'Không thể đổi tên thư mục.');
+                                      }
                                     }
                                     setDialogConfig(null);
                                   }
@@ -876,6 +1004,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             >
                               <MoreHorizontal className="w-3.5 h-3.5 text-[#5f6368]" />
                               Đổi tên
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                closeDropdown();
+                                setMoveFolderTarget({ id: fol.id, name: fol.name });
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#202124] hover:bg-[#f1f3f4] transition-colors"
+                            >
+                              <Folder className="w-3.5 h-3.5 text-[#5f6368]" />
+                              Di chuyển
                             </button>
                             <div className="border-t border-[#e0e3e7] my-1" />
                             <button
@@ -1088,7 +1227,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                       onClick={(e) => handleSelect(e, fol.id, 'folder')}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
-                        toast.info(`Đang mở thư mục: ${fol.name}`);
+                        setCurrentFolderId(fol.id);
                       }}
                       className={`transition-colors cursor-pointer group ${isSelected ? 'bg-[#e8f0fe]' : 'hover:bg-[#f8fafd]'}`}
                     >
@@ -1141,7 +1280,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                             >
                               <button
                                 onClick={() => {
-                                  toast.info(`Mở thư mục: ${fol.name}`);
+                                  setCurrentFolderId(fol.id);
                                   closeDropdown();
                                 }}
                                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#202124] hover:bg-[#f1f3f4] transition-colors"
@@ -1158,8 +1297,19 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                     defaultValue: fol.name,
                                     inputPlaceholder: 'Nhập tên mới',
                                     confirmLabel: 'OK',
-                                    onConfirm: (name) => {
-                                      if (name.trim()) setFolders(prev => prev.map(f => f.id === fol.id ? { ...f, name: name.trim() } : f));
+                                    onConfirm: async (name) => {
+                                      if (name.trim()) {
+                                        try {
+                                          await renameFolderOnBackend(fol.id, name.trim());
+                                          setFolders(prev => prev.map(f => f.id === fol.id ? { ...f, name: name.trim() } : f));
+                                          setFolderContentsFolders(prev => prev.map(f => f.id === fol.id ? { ...f, name: name.trim() } : f));
+                                          setBreadcrumbs(prev => prev.map(b => b.id === fol.id ? { ...b, name: name.trim() } : b));
+                                          toast.success('Đổi tên thư mục thành công.');
+                                        } catch (err: any) {
+                                          console.error(err);
+                                          toast.error(err.message || 'Không thể đổi tên thư mục.');
+                                        }
+                                      }
                                       setDialogConfig(null);
                                     }
                                   });
@@ -1168,6 +1318,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               >
                                 <MoreHorizontal className="w-3.5 h-3.5 text-[#5f6368]" />
                                 Đổi tên
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  closeDropdown();
+                                  setMoveFolderTarget({ id: fol.id, name: fol.name });
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#202124] hover:bg-[#f1f3f4] transition-colors"
+                              >
+                                <Folder className="w-3.5 h-3.5 text-[#5f6368]" />
+                                Di chuyển
                               </button>
                               <div className="border-t border-[#e0e3e7] my-1" />
                               <button
@@ -1411,6 +1572,17 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           documentId={activeShareDoc.id}
           documentTitle={activeShareDoc.title}
           onClose={() => setActiveShareDoc(null)}
+        />
+      )}
+
+      {moveFolderTarget && (
+        <MoveFolderModal
+          isOpen={moveFolderTarget !== null}
+          folderId={moveFolderTarget.id}
+          folderName={moveFolderTarget.name}
+          folders={folders}
+          onConfirm={handleMoveFolderConfirm}
+          onClose={() => setMoveFolderTarget(null)}
         />
       )}
     </div>

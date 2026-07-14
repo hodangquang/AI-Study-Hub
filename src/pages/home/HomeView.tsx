@@ -33,7 +33,8 @@ import {
   deleteDocumentOnBackend,
   downloadDocumentFile,
   updateDocumentMetadata,
-  createDocumentShareLink
+  createDocumentShareLink,
+  renameFolderOnBackend
 } from '@/services/documentsApi';
 import CustomDialog from '@/components/ui/CustomDialog';
 import ShareModal from '@/components/modals/ShareModal';
@@ -48,6 +49,7 @@ interface HomeViewProps {
   onOpenAIOverlay: (doc: StudyDocument) => void;
   openUploadModal: () => void;
   currentUser: AuthUser | null;
+  setCurrentFolderId: (id: string | null) => void;
 }
 
 const HomeView: React.FC<HomeViewProps> = ({
@@ -60,6 +62,7 @@ const HomeView: React.FC<HomeViewProps> = ({
   onOpenAIOverlay,
   openUploadModal,
   currentUser,
+  setCurrentFolderId
 }) => {
   const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
 
@@ -128,8 +131,8 @@ const HomeView: React.FC<HomeViewProps> = ({
     }
   };
 
-  // Filter out deleted documents
-  const activeDocs = documents.filter(d => !d.isDeleted);
+  // Filter out deleted documents and show only user's own documents
+  const activeDocs = documents.filter(d => !d.isDeleted && (!currentUser || d.uploaderId === currentUser.id));
 
   // Suggested documents (limit to 6 for clean view, or show more if needed)
   const suggestedDocs = activeDocs.slice(0, 6);
@@ -138,6 +141,11 @@ const HomeView: React.FC<HomeViewProps> = ({
   const suggestedFolders = folders.slice(0, 5);
 
   const handleFolderClick = (folder: any) => {
+    if (folder.type === 'folder') {
+      setCurrentFolderId(folder.id);
+    } else {
+      setCurrentFolderId(null);
+    }
     setActiveTab('documents');
   };
 
@@ -478,9 +486,16 @@ const HomeView: React.FC<HomeViewProps> = ({
                             defaultValue: folder.name,
                             inputPlaceholder: 'Nhập tên mới cho thư mục',
                             confirmLabel: 'OK',
-                            onConfirm: (newName) => {
+                            onConfirm: async (newName) => {
                               if (newName.trim()) {
-                                toast.success(`Đổi tên thư mục thành: "${newName.trim()}" (Demo)`);
+                                try {
+                                  await renameFolderOnBackend(folder.id, newName.trim());
+                                  setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, name: newName.trim() } : f));
+                                  toast.success('Đổi tên thư mục thành công.');
+                                } catch (err: any) {
+                                  console.error(err);
+                                  toast.error(err.message || 'Không thể đổi tên thư mục.');
+                                }
                               }
                               setDialogConfig(null);
                             }

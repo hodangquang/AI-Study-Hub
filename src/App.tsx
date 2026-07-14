@@ -3,7 +3,7 @@ import { INITIAL_GROUPS } from "@/data";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { StudyDocument, StudyGroup } from "@/types";
-import { fetchDocuments, fetchCategories, resolveShareToken, uploadDocumentFile } from "@/services/documentsApi";
+import { fetchDocuments, fetchCategories, resolveShareToken, uploadDocumentFile, fetchFoldersFromBackend, createFolderOnBackend } from "@/services/documentsApi";
 
 // Component imports
 import Sidebar from "@/components/Sidebar";
@@ -15,6 +15,7 @@ import FavoritesView from "@/pages/favorites/FavoritesView";
 import ChatbotView from "@/pages/chatbot/ChatbotView";
 import AIDocumentOverlay from "@/components/AIDocumentOverlay";
 import UploadModal from "@/components/UploadModal";
+import Loader from "@/components/Loader";
 import LoginView from "@/pages/auth/LoginView";
 import RegisterView from "@/pages/auth/RegisterView";
 import VerifyEmailView from "@/pages/auth/VerifyEmailView";
@@ -49,6 +50,8 @@ export default function App() {
   const [folders, setFolders] = useState<any[]>([]);
   const [groups, setGroups] = useState<StudyGroup[]>([]);
   const [storageQuota, setStorageQuota] = useState<UserStorageInfo | null>(null);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
 
   // Modal & Slideover navigation states
   const [selectedDocForAI, setSelectedDocForAI] =
@@ -74,48 +77,64 @@ export default function App() {
       // Check if token is expired before restoring session
       if (isTokenExpired()) {
         clearAuthSession();
-        // Don't restore — force re-login
+        setInitialLoading(false);
       } else {
         setUser(session.user);
       }
+    } else {
+      setInitialLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (user) {
-      // 1. Tải tệp thật
-      fetchDocuments()
-        .then((docs) => setDocuments(docs))
-        .catch((err) => {
+      setInitialLoading(true);
+      Promise.all([
+        fetchDocuments().catch((err) => {
           console.error("Lỗi tải tài liệu từ API thật:", err);
-          setDocuments([]);
-        });
+          return [];
+        }),
+        fetchCategories().catch(() => []),
+        fetchFoldersFromBackend().catch(() => [])
+      ]).then(([docs, cats, backendFolders]) => {
+        setDocuments(docs);
 
-      // 2. Tải thư mục danh mục thật
-      fetchCategories()
-        .then((cats) => {
-          if (cats.length > 0) {
-            setFolders(cats.map((c, i) => ({
-              id: c.id,
-              name: c.name,
-              owner: 'me',
-              dateModified: 'Vừa tải',
-              size: '—',
-              color: ['#ffb783', '#c0c1ff', '#8b5cf6', '#10b981', '#f59e0b'][i % 5] || '#1967d2',
-              bg: '#fff7f2',
-              type: 'category'
-            })));
-          } else {
-            setFolders([]);
-          }
-        })
-        .catch((err) => {
-          console.error("Lỗi tải danh mục từ API thật:", err);
-          setFolders([]);
-        });
+        const mappedCats = cats.map((c, i) => ({
+          id: c.id,
+          name: c.name,
+          owner: 'me',
+          dateModified: 'Vừa tải',
+          size: '—',
+          color: ['#ffb783', '#c0c1ff', '#8b5cf6', '#10b981', '#f59e0b'][i % 5] || '#1967d2',
+          bg: '#fff7f2',
+          type: 'category'
+        }));
+
+        const mappedFolders = backendFolders.map((f, i) => ({
+          id: f.id,
+          name: f.name,
+          owner: 'me',
+          dateModified: 'Vừa tải',
+          size: '—',
+          color: ['#10b981', '#f59e0b', '#ffb783', '#c0c1ff', '#8b5cf6'][i % 5] || '#1967d2',
+          bg: '#f0fdf4',
+          type: 'folder',
+          parentId: f.parentId
+        }));
+
+        setFolders([...mappedCats, ...mappedFolders]);
+      }).catch((err) => {
+        console.error("Lỗi tải danh mục/thư mục từ API thật:", err);
+        setFolders([]);
+      }).finally(() => {
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 1500);
+      });
     } else {
       setDocuments([]);
       setFolders([]);
+      setInitialLoading(false);
     }
   }, [user]);
 
@@ -227,6 +246,28 @@ export default function App() {
     );
   };
 
+  const handleCreateFolder = async (name: string, parentId?: string | null) => {
+    try {
+      const newFolder = await createFolderOnBackend({ name, parentId });
+      const mappedFolder = {
+        id: newFolder.id,
+        name: newFolder.name,
+        owner: 'me',
+        dateModified: 'Vừa tải',
+        size: '—',
+        color: ['#10b981', '#f59e0b', '#ffb783', '#c0c1ff', '#8b5cf6'][folders.length % 5] || '#1967d2',
+        bg: '#f0fdf4',
+        type: 'folder',
+        parentId: newFolder.parentId
+      };
+      setFolders((prev) => [...prev, mappedFolder]);
+      toast.success(`Đã tạo thư mục: "${name}"`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Lỗi khi tạo thư mục.');
+    }
+  };
+
   // Navigates directly from Doc AI Overlay into chat with this document loaded
   const handleOpenChatWithDoc = (doc: StudyDocument) => {
     setInitialSelectedDocForChat(doc);
@@ -249,6 +290,7 @@ export default function App() {
             onOpenAIOverlay={(doc) => setSelectedDocForAI(doc)}
             openUploadModal={() => setShowUploadModal(true)}
             currentUser={user}
+            setCurrentFolderId={setCurrentFolderId}
           />
         );
       case "documents":
@@ -262,6 +304,8 @@ export default function App() {
             onOpenAIOverlay={(doc) => setSelectedDocForAI(doc)}
             openUploadModal={() => setShowUploadModal(true)}
             currentUser={user}
+            currentFolderId={currentFolderId}
+            setCurrentFolderId={setCurrentFolderId}
           />
         );
       case "groups":
@@ -369,7 +413,11 @@ export default function App() {
 
   return (
     <>
-      {!user ? (
+      {initialLoading ? (
+        <div className="min-h-screen flex items-center justify-center bg-[#f8fafd]">
+          <Loader />
+        </div>
+      ) : !user ? (
         renderAuthContent()
       ) : (
         // Show main app
@@ -389,6 +437,7 @@ export default function App() {
             storageQuota={storageQuota}
             folders={folders}
             onImportSuccess={handleUploadSuccess}
+            onCreateFolder={handleCreateFolder}
           />
 
           {/* Main Panel Column */}
@@ -422,6 +471,7 @@ export default function App() {
             <UploadModal
               onClose={() => setShowUploadModal(false)}
               onUploadSuccess={handleUploadSuccess}
+              folderId={currentFolderId}
             />
           )}
         </div>

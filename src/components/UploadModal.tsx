@@ -6,12 +6,13 @@ import { uploadDocumentFile, fetchCategories, fetchDocumentUploadStatus, Backend
 interface UploadModalProps {
   onClose: () => void;
   onUploadSuccess: (newDoc: StudyDocument) => void;
+  folderId?: string | null;
 }
 
 const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.txt'];
 const ACCEPTED_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
 
-const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess }) => {
+const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, folderId }) => {
   const [fileTitle, setFileTitle]         = useState('');
   const [description, setDescription]    = useState('');
   const [selectedFile, setSelectedFile]  = useState<File | null>(null);
@@ -106,7 +107,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess }) =
         categoryId || undefined,
         undefined,
         true,
-        description.trim() || undefined
+        description.trim() || undefined,
+        folderId
       );
       setUploaded(true);
       setLoading(false); // finish upload, start polling status
