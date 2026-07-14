@@ -1,73 +1,41 @@
-# React + TypeScript + Vite
+# Gr8 AI Study Hub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ứng dụng học tập (giao diện từ **ai-study-hub**, API Gemini).
 
-Currently, two official plugins are available:
+## Chạy dev — http://localhost:5173
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env
+# Thêm GEMINI_API_KEY vào .env
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**Terminal 1** — giao diện:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+
+**Terminal 2** — API AI (bắt buộc cho chat & phân tích tài liệu):
+
+```bash
+npm run dev:api
+```
+
+Hoặc: `npm run dev:all`
+
+## Cấu trúc
+
+| Thư mục | Vai trò |
+|---------|---------|
+| `src/` | Mã chạy chính (từ ai-study-hub) |
+| `src/data.ts` | Dữ liệu mẫu tài liệu & nhóm |
+| `server.ts` | `/api/gemini/chat`, `/api/gemini/analyze-doc` |
+| `zip/`, `ai-study-hub/` | Bản gốc tham khảo (không dùng khi build) |
+
+## Tính năng chính
+
+- Dashboard, Tài liệu, Yêu thích, Nhóm, Chatbot AI
+- Overlay phân tích AI tài liệu (`AIDocumentOverlay`)
+- Upload modal kéo-thả (`UploadModal`)
+- Thùng rác, Cài đặt, Admin, Trợ giúp
