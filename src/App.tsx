@@ -17,6 +17,9 @@ import AIDocumentOverlay from "@/components/AIDocumentOverlay";
 import UploadModal from "@/components/UploadModal";
 import LoginView from "@/pages/auth/LoginView";
 import RegisterView from "@/pages/auth/RegisterView";
+import VerifyEmailView from "@/pages/auth/VerifyEmailView";
+import ForgotPasswordView from "@/pages/auth/ForgotPasswordView";
+import ResetPasswordView from "@/pages/auth/ResetPasswordView";
 import {
   TrashView,
   SettingsView,
@@ -36,7 +39,8 @@ import {
 
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'register' | 'verify-email' | 'forgot-password' | 'reset-password'>('login');
+  const [pendingEmail, setPendingEmail] = useState<string>("");
   const [activeTab, setActiveTab] = useState<string>("home");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -198,30 +202,6 @@ export default function App() {
     setActiveTab("home");
   };
 
-  const handleRegister = (payload: {
-    fullName: string;
-    email: string;
-    avatarUrl: string;
-  }) => {
-    const newUser: AuthUser = {
-      id: `local-${Date.now()}`,
-      fullName: payload.fullName,
-      email: payload.email,
-      username: payload.email.split("@")[0],
-      avatarUrl: payload.avatarUrl,
-      role: "user",
-    };
-    const session: AuthSession = {
-      user: newUser,
-      accessToken: "",
-      tokenType: "Bearer",
-      expiresIn: 0,
-    };
-    saveAuthSession(session);
-    setUser(newUser);
-    setActiveTab("home");
-  };
-
   const handleLogout = () => {
     setUser(null);
     clearAuthSession();
@@ -329,21 +309,68 @@ export default function App() {
     }
   };
 
+  const renderAuthContent = () => {
+    switch (authView) {
+      case "register":
+        return (
+          <RegisterView
+            onRegisterSuccess={(email) => {
+              setPendingEmail(email);
+              setAuthView("verify-email");
+            }}
+            onSwitchToLogin={() => setAuthView("login")}
+          />
+        );
+      case "verify-email":
+        return (
+          <VerifyEmailView
+            email={pendingEmail}
+            onVerificationSuccess={() => {
+              setAuthView("login");
+            }}
+            onBackToLogin={() => setAuthView("login")}
+          />
+        );
+      case "forgot-password":
+        return (
+          <ForgotPasswordView
+            onCodeSent={(email) => {
+              setPendingEmail(email);
+              setAuthView("reset-password");
+            }}
+            onBackToLogin={() => setAuthView("login")}
+          />
+        );
+      case "reset-password":
+        return (
+          <ResetPasswordView
+            email={pendingEmail}
+            onResetSuccess={() => {
+              setAuthView("login");
+            }}
+            onBackToLogin={() => setAuthView("login")}
+          />
+        );
+      case "login":
+      default:
+        return (
+          <LoginView
+            onLogin={handleLogin}
+            onSwitchToRegister={() => setAuthView("register")}
+            onForgotPassword={() => setAuthView("forgot-password")}
+            onUnverifiedEmailRedirect={(email) => {
+              setPendingEmail(email);
+              setAuthView("verify-email");
+            }}
+          />
+        );
+    }
+  };
+
   return (
     <>
       {!user ? (
-        // Show login or register screen
-        isRegistering ? (
-          <RegisterView
-            onRegister={handleRegister}
-            onSwitchToLogin={() => setIsRegistering(false)}
-          />
-        ) : (
-          <LoginView
-            onLogin={handleLogin}
-            onSwitchToRegister={() => setIsRegistering(true)}
-          />
-        )
+        renderAuthContent()
       ) : (
         // Show main app
         <div className="bg-[#f8fafd] text-[#1f1f1f] min-h-screen flex selection:bg-[#d2e3fc] selection:text-[#174ea6]">

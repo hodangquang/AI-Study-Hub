@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Formik, Form } from "formik";
-import { Mail, Lock, User, Eye, EyeOff, Chrome, Github } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Chrome, Github, Loader2 } from "lucide-react";
+import { registerAccount } from "@/services/authApi";
 import {
   registerInitialValues,
   registerValidationSchema,
@@ -9,27 +10,33 @@ import {
 import { AuthField, AuthCheckboxField } from "@/components/auth/AuthField";
 
 interface RegisterViewProps {
-  onRegister: (user: {
-    fullName: string;
-    email: string;
-    avatarUrl: string;
-  }) => void;
+  onRegisterSuccess: (email: string) => void;
   onSwitchToLogin: () => void;
 }
 
 export default function RegisterView({
-  onRegister,
+  onRegisterSuccess,
   onSwitchToLogin,
 }: RegisterViewProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [apiError, setApiError] = useState("");
 
-  const handleSubmit = (values: RegisterFormValues) => {
-    onRegister({
-      fullName: values.fullName.trim(),
-      email: values.email.trim().toLowerCase(),
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(values.fullName.trim())}&background=6366F1&color=fff`,
-    });
+  const handleSubmit = async (values: RegisterFormValues) => {
+    setApiError("");
+    try {
+      await registerAccount({
+        username: values.username.trim(),
+        fullName: values.fullName.trim(),
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+      });
+      onRegisterSuccess(values.email.trim().toLowerCase());
+    } catch (err) {
+      setApiError(
+        err instanceof Error ? err.message : "Đăng ký tài khoản thất bại."
+      );
+    }
   };
 
   return (
@@ -69,6 +76,16 @@ export default function RegisterView({
                     type="text"
                     placeholder="Nguyễn Minh Khôi"
                     autoComplete="name"
+                    icon={<User className="w-5 h-5" />}
+                  />
+
+                  <AuthField
+                    formik={formik}
+                    name="username"
+                    label="Tên đăng nhập"
+                    type="text"
+                    placeholder="minhkhoi_nguyen"
+                    autoComplete="username"
                     icon={<User className="w-5 h-5" />}
                   />
 
@@ -157,12 +174,28 @@ export default function RegisterView({
                     }
                   />
 
+                  {apiError && (
+                    <div
+                      className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
+                      role="alert"
+                    >
+                      {apiError}
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     disabled={formik.isSubmitting}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-indigo-500/30"
+                    className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-indigo-500/30"
                   >
-                    Đăng ký
+                    {formik.isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Đang đăng ký...
+                      </>
+                    ) : (
+                      "Đăng ký"
+                    )}
                   </button>
                 </Form>
               )}

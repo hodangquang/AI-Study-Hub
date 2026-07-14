@@ -13,17 +13,23 @@ import { AuthField } from "@/components/auth/AuthField";
 interface LoginViewProps {
   onLogin: (session: AuthSession) => void;
   onSwitchToRegister: () => void;
+  onForgotPassword: () => void;
+  onUnverifiedEmailRedirect?: (email: string) => void;
 }
 
 export default function LoginView({
   onLogin,
   onSwitchToRegister,
+  onForgotPassword,
+  onUnverifiedEmailRedirect,
 }: LoginViewProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState("");
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const handleSubmit = async (values: LoginFormValues) => {
     setApiError("");
+    setUnverifiedEmail("");
     try {
       const session = await loginAccount(
         values.email.trim(),
@@ -31,11 +37,17 @@ export default function LoginView({
       );
       onLogin(session);
     } catch (err) {
-      setApiError(
-        err instanceof Error
-          ? err.message
-          : "Đăng nhập thất bại. Vui lòng thử lại.",
-      );
+      const msg = err instanceof Error ? err.message : "Đăng nhập thất bại. Vui lòng thử lại.";
+      setApiError(msg);
+      
+      // If error message indicates email is not verified, show verification link
+      if (
+        msg.toLowerCase().includes("chưa xác thực email") || 
+        msg.toLowerCase().includes("not verified") ||
+        msg.toLowerCase().includes("chưa xác minh")
+      ) {
+        setUnverifiedEmail(values.email.trim());
+      }
     }
   };
 
@@ -88,7 +100,8 @@ export default function LoginView({
                     labelRight={
                       <button
                         type="button"
-                        className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                        onClick={onForgotPassword}
+                        className="text-sm text-indigo-500 hover:text-indigo-400 font-medium transition-colors cursor-pointer"
                       >
                         Quên mật khẩu?
                       </button>
@@ -114,10 +127,19 @@ export default function LoginView({
 
                   {apiError && (
                     <div
-                      className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
+                      className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm flex flex-col gap-1"
                       role="alert"
                     >
-                      {apiError}
+                      <span>{apiError}</span>
+                      {unverifiedEmail && onUnverifiedEmailRedirect && (
+                        <button
+                          type="button"
+                          onClick={() => onUnverifiedEmailRedirect(unverifiedEmail)}
+                          className="text-indigo-600 hover:text-indigo-700 hover:underline font-semibold text-left mt-1 cursor-pointer"
+                        >
+                          Nhấp vào đây để xác thực email ngay.
+                        </button>
+                      )}
                     </div>
                   )}
 

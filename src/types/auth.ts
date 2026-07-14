@@ -104,6 +104,38 @@ export interface ChangePasswordResponse {
   data: null;
 }
 
+export interface RegisterPayload {
+  username: string;
+  email: string;
+  password: string;
+  fullName: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  account?: {
+    acknowledged: boolean;
+    insertedId: string;
+  };
+}
+
+export interface VerifyEmailPayload {
+  email: string;
+  otp: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+
 
 
 

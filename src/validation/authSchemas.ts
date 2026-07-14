@@ -35,11 +35,22 @@ export type LoginFormValues = Yup.InferType<typeof loginValidationSchema>;
 
 export const registerInitialValues = {
   fullName: "",
+  username: "",
   email: "",
   password: "",
   confirmPassword: "",
   acceptTerms: false,
 };
+
+const usernameField = Yup.string()
+  .trim()
+  .required("Vui lòng nhập tên đăng nhập")
+  .min(3, "Tên đăng nhập phải từ 3 đến 30 ký tự")
+  .max(30, "Tên đăng nhập phải từ 3 đến 30 ký tự")
+  .matches(
+    /^[a-zA-Z0-9_]+$/,
+    "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới (_)"
+  );
 
 export const registerValidationSchema = Yup.object({
   fullName: Yup.string()
@@ -49,8 +60,9 @@ export const registerValidationSchema = Yup.object({
     .max(100, "Họ và tên không được vượt quá 100 ký tự")
     .matches(
       /^[\p{L}\s.'-]+$/u,
-      "Họ và tên chỉ được chứa chữ cái, khoảng trắng và dấu . ' -",
+      "Họ và tên chỉ được chứa chữ cái, khoảng trắng và dấu . ' -"
     ),
+  username: usernameField,
   email: emailField,
   password: strongPasswordField,
   confirmPassword: Yup.string()
@@ -62,3 +74,49 @@ export const registerValidationSchema = Yup.object({
 });
 
 export type RegisterFormValues = Yup.InferType<typeof registerValidationSchema>;
+
+// Verify Email
+export const verifyEmailInitialValues = {
+  otp: "",
+};
+
+export const verifyEmailValidationSchema = Yup.object({
+  otp: Yup.string()
+    .trim()
+    .required("Vui lòng nhập mã OTP")
+    .length(6, "Mã OTP phải gồm đúng 6 ký tự"),
+});
+
+export type VerifyEmailFormValues = Yup.InferType<typeof verifyEmailValidationSchema>;
+
+// Forgot Password
+export const forgotPasswordInitialValues = {
+  email: "",
+};
+
+export const forgotPasswordValidationSchema = Yup.object({
+  email: emailField,
+});
+
+export type ForgotPasswordFormValues = Yup.InferType<typeof forgotPasswordValidationSchema>;
+
+// Reset Password
+export const resetPasswordInitialValues = {
+  otp: "",
+  newPassword: "",
+  confirmPassword: "",
+};
+
+export const resetPasswordValidationSchema = Yup.object({
+  otp: Yup.string()
+    .trim()
+    .required("Vui lòng nhập mã OTP")
+    .length(6, "Mã OTP phải gồm đúng 6 ký tự"),
+  newPassword: strongPasswordField,
+  confirmPassword: Yup.string()
+    .required("Vui lòng xác nhận mật khẩu mới")
+    .oneOf([Yup.ref("newPassword")], "Mật khẩu xác nhận không khớp"),
+});
+
+export type ResetPasswordFormValues = Yup.InferType<typeof resetPasswordValidationSchema>;
+
