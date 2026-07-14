@@ -20,6 +20,7 @@ export interface StudyDocument {
   viewCount?: number;
   downloadCount?: number;
   tags?: string[];
+  folderId?: string;
 }
 
 export interface StudyGroup {
