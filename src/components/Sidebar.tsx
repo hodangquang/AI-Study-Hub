@@ -36,6 +36,7 @@ interface SidebarProps {
   } | null;
   folders: any[];
   onImportSuccess?: (newDoc: any) => void;
+  onCreateFolder?: (name: string, parentId?: string | null) => Promise<void> | void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -45,7 +46,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   openUploadModal,
   storageQuota,
   folders,
-  onImportSuccess
+  onImportSuccess,
+  onCreateFolder
 }) => {
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -140,7 +142,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                   inputPlaceholder: 'Nhập tên thư mục mới',
                   confirmLabel: 'Tạo',
                   onConfirm: (name) => {
-                    if (name.trim()) toast.success(`Đã tạo thư mục: "${name.trim()}"`);
+                    if (name.trim()) {
+                      if (onCreateFolder) {
+                        onCreateFolder(name.trim(), null);
+                      } else {
+                        toast.success(`Đã tạo thư mục: "${name.trim()}"`);
+                      }
+                    }
                     setDialogConfig(null);
                   }
                 });
@@ -296,10 +304,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 const newDoc = await uploadDocumentFile(
                   file,
                   fileTitle,
-                  targetFolderId || undefined,
+                  undefined,
                   sharedDoc.solution?.tags?.join(',') || sharedDoc.tags?.join(','),
                   true,
-                  sharedDoc.solution?.description || sharedDoc.description
+                  sharedDoc.solution?.description || sharedDoc.description,
+                  targetFolderId || undefined
                 );
 
                 if (onImportSuccess) {

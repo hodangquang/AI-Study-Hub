@@ -85,12 +85,13 @@ export function mapBackendDocToStudyDoc(doc: any): StudyDocument {
     iconBg: fileType === 'pdf' ? '#EF4444' : fileType === 'docx' ? '#3B82F6' : '#8B5CF6',
     ownerName,
     ownerAvatar,
-    uploaderId: doc.uploaderId,
+    uploaderId: doc.uploaderId || uploadedBy._id || uploadedBy.id || undefined,
     description: doc.description,
     pageCount: doc.pageCount,
     viewCount: doc.viewCount,
     downloadCount: doc.downloadCount,
-    tags: doc.tags
+    tags: doc.tags,
+    folderId: doc.folderId || (doc.folder && typeof doc.folder === 'object' ? doc.folder._id : doc.folder) || undefined,
   };
 }
 
@@ -177,7 +178,8 @@ export async function uploadDocumentFile(
   categoryId?: string,
   tags?: string,
   isPublic: boolean = true,
-  description?: string
+  description?: string,
+  folderId?: string | null
 ): Promise<StudyDocument> {
   const headers = getAuthHeaders();
 
@@ -188,6 +190,7 @@ export async function uploadDocumentFile(
   if (description) formData.append("description", description);
   if (categoryId) formData.append("categoryId", categoryId);
   if (tags) formData.append("tags", tags);
+  if (folderId) formData.append("folderId", folderId);
   formData.append("isPublic", String(isPublic));
   formData.append("enableOcr", "true");
 
@@ -387,7 +390,7 @@ export async function viewDocumentFile(id: string, fileType: string): Promise<st
   }
 
   const blob = await response.blob();
-  
+
   // Map fileType to standard MIME types so browser can view inline (e.g. PDF viewer)
   let mimeType = "application/octet-stream";
   if (fileType === "pdf") mimeType = "application/pdf";
@@ -510,7 +513,7 @@ export async function createDocumentShareLink(
   payload: CreateShareLinkPayload = {}
 ): Promise<{ token: string; shareUrl?: string }> {
   const headers = getAuthHeaders();
-  
+
   const body = {
     permissionLevel: payload.permissionLevel ?? "viewer",
     canDownload: payload.canDownload ?? true,
@@ -583,5 +586,326 @@ export async function revokeDocumentShareLink(
     throw new Error(errorBody.message || "Không thể hủy bỏ liên kết chia sẻ.");
   }
 }
+
+export interface CreateFolderPayload {
+  name: string;
+  parentId?: string | null;
+}
+
+export interface FolderItem {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function createFolderOnBackend(payload: CreateFolderPayload): Promise<FolderItem> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl("/folders"), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({
+      name: payload.name,
+      parentId: payload.parentId || undefined,
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Tạo thư mục thất bại.");
+  }
+
+  const resBody = await response.json();
+  const data = resBody.data || resBody;
+  return {
+    id: data._id || data.id,
+    name: data.name,
+    parentId: data.parentId,
+    ownerId: data.ownerId,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  };
+}
+
+export async function fetchFoldersFromBackend(folderId?: string): Promise<FolderItem[]> {
+  const headers = getAuthHeaders();
+  const qs = new URLSearchParams();
+  if (folderId) qs.set('folderId', folderId);
+  const response = await fetch(apiUrl(`/folders/contents?${qs.toString()}`), {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      ...headers,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    return [];
+  }
+
+  const resBody = await response.json();
+  const data = resBody.data || resBody;
+  const folderList = data.folders || [];
+  return folderList.map((f: any) => ({
+    id: f._id || f.id,
+    name: f.name,
+    parentId: f.parentId,
+    ownerId: f.ownerId,
+    createdAt: f.createdAt,
+    updatedAt: f.updatedAt,
+  }));
+}
+
+export async function renameFolderOnBackend(id: string, name: string): Promise<void> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl(`/folders/${id}`), {
+    method: "PUT",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({ name }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Đổi tên thư mục thất bại.");
+  }
+}
+
+export async function deleteFolderOnBackend(id: string): Promise<void> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl(`/folders/${id}`), {
+    method: "DELETE",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({ confirm: true }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Xóa thư mục thất bại.");
+  }
+}
+
+export interface FolderContents {
+  currentFolder: FolderItem | null;
+  breadcrumbs: FolderItem[];
+  folders: FolderItem[];
+  documents: StudyDocument[];
+}
+
+export async function fetchFolderContents(params: {
+  folderId?: string;
+  q?: string;
+  sortBy?: string;
+  order?: string;
+}): Promise<FolderContents> {
+  const headers = getAuthHeaders();
+  const qs = new URLSearchParams();
+  if (params.folderId) qs.set('folderId', params.folderId);
+  if (params.q) qs.set('q', params.q);
+  if (params.sortBy) qs.set('sortBy', params.sortBy);
+  if (params.order) qs.set('order', params.order);
+
+  const response = await fetch(apiUrl(`/folders/contents?${qs.toString()}`), {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      ...headers,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    throw new Error("Không thể tải nội dung thư mục.");
+  }
+
+  const resBody = await response.json();
+  const data = resBody.data || resBody;
+
+  const currentFolder = data.currentFolder ? {
+    id: data.currentFolder._id || data.currentFolder.id,
+    name: data.currentFolder.name,
+    parentId: data.currentFolder.parentId,
+    ownerId: data.currentFolder.ownerId,
+    createdAt: data.currentFolder.createdAt,
+    updatedAt: data.currentFolder.updatedAt,
+  } : null;
+
+  const breadcrumbs = (data.breadcrumbs || []).map((b: any) => ({
+    id: b._id || b.id,
+    name: b.name,
+    parentId: b.parentId,
+    ownerId: b.ownerId,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+  }));
+
+  const folders = (data.folders || []).map((f: any) => ({
+    id: f._id || f.id,
+    name: f.name,
+    parentId: f.parentId,
+    ownerId: f.ownerId,
+    createdAt: f.createdAt,
+    updatedAt: f.updatedAt,
+  }));
+
+  const documents = (data.documents || []).map(mapBackendDocToStudyDoc);
+
+  return {
+    currentFolder,
+    breadcrumbs,
+    folders,
+    documents,
+  };
+}
+
+export async function fetchFolderBreadcrumb(id: string): Promise<FolderItem[]> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl(`/folders/${id}/breadcrumb`), {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      ...headers,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    return [];
+  }
+
+  const resBody = await response.json();
+  const list = resBody.data || resBody || [];
+  return list.map((b: any) => ({
+    id: b._id || b.id,
+    name: b.name,
+    parentId: b.parentId,
+    ownerId: b.ownerId,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+  }));
+}
+
+export async function moveFolderOnBackend(id: string, parentId: string | null): Promise<void> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl(`/folders/${id}/move`), {
+    method: "PUT",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({ parentId: parentId || null }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Di chuyển thư mục thất bại.");
+  }
+}
+
+export interface SummarizePayload {
+  length?: 'short' | 'medium' | 'long';
+  language?: string;
+  focus?: string;
+}
+
+export interface SummarizeResult {
+  summary: string;
+  keyPoints: string[];
+}
+
+export async function summarizeDocumentOnBackend(
+  id: string,
+  payload: SummarizePayload = {}
+): Promise<SummarizeResult> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl(`/documents/${id}/ai/summarize`), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({
+      length: payload.length || "medium",
+      language: payload.language || "Vietnamese",
+      focus: payload.focus || "General",
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Tóm tắt tài liệu thất bại.");
+  }
+
+  const resBody = await response.json();
+  const data = resBody.data || resBody;
+  return {
+    summary: data.summary || "",
+    keyPoints: data.keyPoints || data.insights || [],
+  };
+}
+
+export interface ExplainConceptPayload {
+  concept: string;
+  level?: 'basic' | 'intermediate' | 'advanced';
+}
+
+export interface ExplainConceptResult {
+  concept: string;
+  explanation: string;
+}
+
+export async function explainConceptOnBackend(
+  id: string,
+  payload: ExplainConceptPayload
+): Promise<ExplainConceptResult> {
+  const headers = getAuthHeaders();
+  const response = await fetch(apiUrl(`/documents/${id}/ai/explain`), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({
+      concept: payload.concept,
+      level: payload.level || "basic",
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Giải thích khái niệm thất bại.");
+  }
+
+  const resBody = await response.json();
+  const data = resBody.data || resBody;
+  return {
+    concept: data.concept || payload.concept,
+    explanation: data.explanation || data.content || "",
+  };
+}
+
 
 

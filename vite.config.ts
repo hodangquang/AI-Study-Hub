@@ -3,7 +3,9 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-const API_PORT = Number(process.env.API_PORT) || 3000;
+// Định nghĩa URL của Backend (Nếu chạy local thì dùng 127.0.0.1:5285)
+// Nếu muốn chạy với server online, bạn đổi thành 'http://103.140.249.210:5285'
+const BACKEND_URL = 'http://127.0.0.1:5285';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -16,32 +18,53 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': {
-        target: `http://127.0.0.1:${API_PORT}`,
-        changeOrigin: true,
-      },
       '/account': {
-        target: 'http://103.140.249.210:5285',
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/gemini': {
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
         secure: false,
       },
       '/documents': {
-        target: 'http://103.140.249.210:5285',
+        target: BACKEND_URL,
         changeOrigin: true,
         secure: false,
       },
       '/categories': {
-        target: 'http://103.140.249.210:5285',
+        target: BACKEND_URL,
         changeOrigin: true,
         secure: false,
       },
       '/users': {
-        target: 'http://103.140.249.210:5285',
+        target: BACKEND_URL,
         changeOrigin: true,
         secure: false,
       },
       '/shared': {
-        target: 'http://103.140.249.210:5285',
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/folders': {
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/chat': {
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/admin': {
+        target: BACKEND_URL,
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: BACKEND_URL,
         changeOrigin: true,
         secure: false,
       },
