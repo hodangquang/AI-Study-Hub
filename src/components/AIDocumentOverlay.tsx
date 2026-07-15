@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StudyDocument } from '../types';
 import { X, Sparkles, AlertCircle, RefreshCw, MessageSquare, BookOpen, Lightbulb, Heading, Eye, Download, Info } from 'lucide-react';
-import { fetchDocumentDetail, summarizeDocumentOnBackend, explainConceptOnBackend } from '../services/documentsApi';
+
+import { fetchDocumentDetailsummarizeDocumentOnBackend, explainConceptOnBackend  } from '../services/documentsApi';
+import BookmarkButton from './BookmarkButton';
+
 
 interface AIDocumentOverlayProps {
   document: StudyDocument | null;
@@ -302,6 +305,12 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
 
         {/* Slide-over Footer */}
         <div className="p-4 bg-slate-50 border-t border-[#e0e3e7] flex gap-3">
+          <BookmarkButton
+            documentId={document.id}
+            documentTitle={document.title}
+            initialBookmarked={document.isFavorite}
+            variant="icon"
+          />
           <button
             type="button"
             onClick={() => onOpenChat(document)}

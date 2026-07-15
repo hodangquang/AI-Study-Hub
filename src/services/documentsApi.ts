@@ -241,11 +241,14 @@ export async function bookmarkDocumentOnBackend(id: string): Promise<void> {
     method: "POST",
     headers: {
       accept: "application/json",
+      "Content-Type": "application/json",
       ...headers,
     },
+    body: JSON.stringify({}),
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error("Không thể đánh dấu tài liệu.");
   }
 }
@@ -261,9 +264,11 @@ export async function unbookmarkDocumentOnBackend(id: string): Promise<void> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error("Không thể bỏ đánh dấu tài liệu.");
   }
 }
+
 
 export interface BackendCategory {
   id: string;
