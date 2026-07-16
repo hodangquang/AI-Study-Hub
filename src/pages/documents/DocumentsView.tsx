@@ -169,7 +169,10 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           }),
           fetchFolderBreadcrumb(currentFolderId).catch(() => [])
         ]);
-        setFilteredDocs(contentsResult.documents);
+        const myDocs = contentsResult.documents.filter(doc =>
+          !currentUser || doc.uploaderId === currentUser.id
+        );
+        setFilteredDocs(myDocs);
         setFolderContentsFolders(contentsResult.folders.map((f, i) => ({
           id: f.id,
           name: f.name,
@@ -182,7 +185,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           parentId: f.parentId
         })));
         setBreadcrumbs(breadcrumbsResult.length > 0 ? breadcrumbsResult : contentsResult.breadcrumbs);
-        setMeta({ page: 1, limit: PAGE_LIMIT, total: contentsResult.documents.length, totalPages: 1 });
+        setMeta({ page: 1, limit: PAGE_LIMIT, total: myDocs.length, totalPages: 1 });
       } else {
         const result = await fetchDocumentsWithParams({
           q: localSearch.trim() || undefined,

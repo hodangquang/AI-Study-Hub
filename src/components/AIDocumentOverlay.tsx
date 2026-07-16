@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StudyDocument } from '../types';
 import { X, Sparkles, AlertCircle, RefreshCw, MessageSquare, BookOpen, Lightbulb, Heading, Eye, Download, Info } from 'lucide-react';
 
-import { fetchDocumentDetailsummarizeDocumentOnBackend, explainConceptOnBackend  } from '../services/documentsApi';
+import { fetchDocumentDetail, summarizeDocumentOnBackend, explainConceptOnBackend } from '../services/documentsApi';
 import BookmarkButton from './BookmarkButton';
 
 
@@ -65,25 +65,29 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
           });
         } catch (aiErr: any) {
           console.warn("Lỗi tóm tắt tài liệu từ API thật, dùng tóm tắt giả lập:", aiErr);
-          const errMsg = aiErr.message || "";
-          if (errMsg.toLowerCase().includes("chunk") || errMsg.toLowerCase().includes("trích xuất")) {
-            throw new Error("Tài liệu chưa hoàn tất quá trình trích xuất văn bản (OCR). Vui lòng đợi hoặc tải lại trang.");
-          }
-          const response = await fetch('/api/gemini/analyze-doc', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fileTitle: document.title,
-              fileType: document.type,
-            }),
-          });
+          try {
+            const response = await fetch('/api/gemini/analyze-doc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileTitle: document.title,
+                fileType: document.type,
+              }),
+            });
 
-          if (!response.ok) {
-            throw new Error('Có lỗi xảy ra khi gọi dịch vụ phân tích tài liệu.');
-          }
+            if (!response.ok) {
+              throw new Error('Có lỗi xảy ra khi gọi dịch vụ phân tích tài liệu.');
+            }
 
-          const data = await response.json();
-          setAnalysis(data);
+            const data = await response.json();
+            setAnalysis(data);
+          } catch (fallbackErr) {
+            const errMsg = aiErr.message || "";
+            if (errMsg.toLowerCase().includes("chunk") || errMsg.toLowerCase().includes("trích xuất")) {
+              throw new Error("Tài liệu chưa hoàn tất quá trình trích xuất văn bản (OCR). Vui lòng đợi hoặc tải lại trang.");
+            }
+            throw fallbackErr;
+          }
         }
       } catch (err: any) {
         console.error('Error analyzing:', err);
