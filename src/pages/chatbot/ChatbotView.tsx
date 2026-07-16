@@ -36,6 +36,7 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
   const abortControllerRef = useRef<AbortController | null>(null);
 
 
+
   // Suggested prompts
   const samplePrompts = [
     { text: 'Tóm tắt lý thuyết Chuẩn hóa CSDL (1NF, 2NF, 3NF)', label: 'Chu chuẩn hóa CSDL' },
@@ -222,7 +223,6 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
       abortControllerRef.current.abort();
     }
   };
-
   const handleCreateNewSessionBtn = () => {
     setSelectedSessionId(null);
     setMessages([
