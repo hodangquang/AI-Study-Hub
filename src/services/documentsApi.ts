@@ -177,7 +177,7 @@ export async function uploadDocumentFile(
   title: string,
   categoryId?: string,
   tags?: string,
-  isPublic: boolean = true,
+  isPublic: boolean = false,
   description?: string,
   folderId?: string | null
 ): Promise<StudyDocument> {
