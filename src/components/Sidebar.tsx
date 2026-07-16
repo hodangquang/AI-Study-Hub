@@ -87,7 +87,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'home', label: 'Trang chủ', icon: Home },
     { id: 'documents', label: 'Tài liệu', icon: FileText },
-    { id: 'groups', label: 'Nhóm học tập', icon: Users },
     { id: 'chatbot', label: 'AI Chatbot', icon: Bot },
     { id: 'favorites', label: 'Yêu thích', icon: Star },
     { id: 'trash', label: 'Thùng rác', icon: Trash2 },

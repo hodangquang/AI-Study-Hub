@@ -106,7 +106,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
         fileTitle.trim(),
         categoryId || undefined,
         undefined,
-        true,
+        false,
         description.trim() || undefined,
         folderId
       );

@@ -98,7 +98,8 @@ export default function App() {
         fetchCategories().catch(() => []),
         fetchFoldersFromBackend().catch(() => [])
       ]).then(([docs, cats, backendFolders]) => {
-        setDocuments(docs);
+        const myDocs = docs.filter(d => !d.uploaderId || d.uploaderId === user.id);
+        setDocuments(myDocs);
 
         const mappedCats = cats.map((c, i) => ({
           id: c.id,
@@ -309,14 +310,7 @@ export default function App() {
             setCurrentFolderId={setCurrentFolderId}
           />
         );
-      case "groups":
-        return (
-          <GroupsView
-            groups={groups}
-            setGroups={setGroups}
-            searchQuery={searchQuery}
-          />
-        );
+
       case "chatbot":
         return (
           <ChatbotView
