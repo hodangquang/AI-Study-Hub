@@ -26,7 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  Link
+  Link,
+  BookOpen
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -203,7 +204,6 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         setMeta({ ...result.meta, total: myDocs.length });
         setBreadcrumbs([]);
         setFolderContentsFolders([]);
-        setDocuments(myDocs);
       }
     } catch (e: any) {
       setApiError(e.message || 'Lỗi khi tải tài liệu.');
@@ -291,11 +291,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   // Folders are still filtered client-side (from parent state or folder contents)
   const filteredFolders = currentFolderId
     ? folderContentsFolders.filter(fol =>
-        fol.name.toLowerCase().includes(localSearch.toLowerCase())
-      )
+      fol.name.toLowerCase().includes(localSearch.toLowerCase())
+    )
     : folders.filter(fol =>
-        fol.name.toLowerCase().includes(localSearch.toLowerCase())
-      );
+      fol.type === 'folder' &&
+      fol.name.toLowerCase().includes(localSearch.toLowerCase())
+    );
 
   // State modification synchronizers
   const toggleFavorite = async (e: React.MouseEvent | React.TouchEvent, docId: string) => {
@@ -305,10 +306,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     try {
       if (doc.isFavorite) {
         await unbookmarkDocumentOnBackend(docId);
+        toast.success(`Đã bỏ yêu thích tài liệu "${doc.title}".`);
       } else {
         await bookmarkDocumentOnBackend(docId);
+        toast.success(`Đã thêm tài liệu "${doc.title}" vào thư mục yêu thích.`);
       }
       setDocuments(prev => prev.map(d => d.id === docId ? { ...d, isFavorite: !d.isFavorite } : d));
+      setFilteredDocs(prev => prev.map(d => d.id === docId ? { ...d, isFavorite: !d.isFavorite } : d));
     } catch (err) {
       console.error(err);
       toast.error('Không thể thực hiện tác vụ yêu thích trên máy chủ.');
@@ -331,10 +335,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         try {
           await deleteDocumentOnBackend(docId, reason.trim() || 'No longer needed');
           setDocuments(prev => prev.map(d => d.id === docId ? { ...d, isDeleted: true } : d));
+          setFilteredDocs(prev => prev.filter(d => d.id !== docId));
           if (selectedItemId === docId) {
             setSelectedItemId(null);
             setSelectedItemType(null);
           }
+          toast.success('Xóa tài liệu thành công.');
         } catch (err) {
           console.error(err);
           toast.error('Không thể xóa tài liệu trên máy chủ.');
@@ -551,8 +557,10 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             try {
               await deleteDocumentOnBackend(selectedItemId);
               setDocuments(prev => prev.map(d => d.id === selectedItemId ? { ...d, isDeleted: true } : d));
+              setFilteredDocs(prev => prev.filter(d => d.id !== selectedItemId));
               setSelectedItemId(null);
               setSelectedItemType(null);
+              toast.success('Xóa tài liệu thành công.');
             } catch (err) {
               console.error(err);
               toast.error('Không thể xóa tài liệu trên máy chủ.');
@@ -568,10 +576,13 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         try {
           if (doc.isFavorite) {
             await unbookmarkDocumentOnBackend(selectedItemId);
+            toast.success(`Đã bỏ yêu thích tài liệu "${doc.title}".`);
           } else {
             await bookmarkDocumentOnBackend(selectedItemId);
+            toast.success(`Đã thêm tài liệu "${doc.title}" vào thư mục yêu thích.`);
           }
           setDocuments(prev => prev.map(d => d.id === selectedItemId ? { ...d, isFavorite: !d.isFavorite } : d));
+          setFilteredDocs(prev => prev.map(d => d.id === selectedItemId ? { ...d, isFavorite: !d.isFavorite } : d));
         } catch (err) {
           console.error(err);
           toast.error('Không thể cập nhật yêu thích trên máy chủ.');
@@ -582,78 +593,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     }
   };
 
-  // Previews matching HomeView.tsx
-  const renderDocPreviewMockup = (doc: StudyDocument) => {
-    switch (doc.type) {
-      case 'pdf':
-        return (
-          <div className="w-full h-full bg-[#fafafa] flex flex-col justify-between p-3 select-none relative overflow-hidden border-b border-[#e0e3e7]">
-            <div className="flex items-center gap-1.5 border-b border-red-100 pb-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#EF4444]"></span>
-              <span className="text-[10px] font-bold text-[#EF4444] uppercase tracking-wider">PDF DOCUMENT</span>
-            </div>
-            <div className="flex-1 py-3.5 space-y-2">
-              <div className="h-2.5 bg-gray-200/80 rounded w-[85%]"></div>
-              <div className="h-2 bg-gray-150 rounded w-[95%]"></div>
-              <div className="h-2 bg-gray-150 rounded w-[60%]"></div>
-              <div className="pt-2 flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center text-[8px] text-red-500 font-extrabold">PDF</div>
-                <div className="h-1.5 bg-gray-150 rounded w-[45%]"></div>
-              </div>
-            </div>
-            <div className="absolute right-[-10px] bottom-[-10px] opacity-[0.06] text-red-500">
-              <FileText className="w-28 h-28" />
-            </div>
-          </div>
-        );
-      case 'docx':
-        return (
-          <div className="w-full h-full bg-[#fafafa] flex flex-col justify-between p-3 select-none relative overflow-hidden border-b border-[#e0e3e7]">
-            <div className="flex items-center gap-1.5 border-b border-blue-100 pb-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#3B82F6]"></span>
-              <span className="text-[10px] font-bold text-[#3B82F6] uppercase tracking-wider">WORD DOCUMENT</span>
-            </div>
-            <div className="flex-1 py-3.5 space-y-2">
-              <div className="h-2 bg-gray-200/85 rounded w-[90%]"></div>
-              <div className="h-2 bg-gray-150 rounded w-[80%]"></div>
-              <div className="h-2 bg-gray-150 rounded w-[85%]"></div>
-              <div className="h-2 bg-gray-150 rounded w-[40%]"></div>
-            </div>
-            <div className="absolute right-[-10px] bottom-[-10px] opacity-[0.06] text-blue-500">
-              <FileCheck className="w-28 h-28" />
-            </div>
-          </div>
-        );
-      case 'pptx':
-        return (
-          <div className="w-full h-full bg-[#201830] flex flex-col justify-between p-3 select-none relative overflow-hidden border-b border-[#e0e3e7] text-white">
-            <div className="flex items-center justify-between border-b border-purple-900/40 pb-1.5">
-              <span className="text-[9px] font-bold text-[#c0c1ff] tracking-wider">PRESENTATION</span>
-              <span className="text-[8px] text-purple-300 font-medium">SLIDE 1/5</span>
-            </div>
-            <div className="flex-1 py-3 flex gap-2 items-center">
-              <div className="flex-1 space-y-2">
-                <div className="h-2 bg-[#d3e4fe] rounded w-[75%]"></div>
-                <div className="h-1 bg-purple-300/40 rounded w-[90%]"></div>
-                <div className="h-1 bg-purple-300/40 rounded w-[60%]"></div>
-              </div>
-              <div className="w-10 h-10 rounded-full border-4 border-purple-500/40 border-t-purple-400 flex items-center justify-center shrink-0">
-                <span className="text-[8px] text-purple-300 font-bold">75%</span>
-              </div>
-            </div>
-            <div className="absolute right-[-5px] bottom-[-5px] opacity-[0.08] text-purple-300">
-              <Layers className="w-24 h-24" />
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <div className="w-full h-full bg-[#fafafa] flex items-center justify-center border-b border-[#e0e3e7]">
-            <FileText className="w-12 h-12 text-gray-300" />
-          </div>
-        );
-    }
-  };
+  const DEFAULT_COVER = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCbbfocjEbKOTSLbClyGfNcRHx-H896PSMtke6hQIXBawzeKwhv-EUXyRzlFl8fUiC8P5iu1kTqN479491dS4-KkH7C-FVedKwXdJQID_pive5sCEt9aKJ9ZqJ9_qogM4gmOXLNwnJTtYHpIXbBBC5Gw876d67hYrNTZSZQbc3cqeNa7bRpdeKY_owqRW7Xf6DQ7AD7LJU6rdWuawmmgYj3kE8gP-N6sMNj395nlFOVyko6CJwZV4YzFjeB2-4snqAFXY40vzWS2NY';
 
   return (
     <div className="space-y-6 animate-fade-in" ref={containerRef} onClick={handleClearSelection}>
@@ -661,7 +601,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 select-none">
           <h2 className="text-xl font-semibold text-[#202124] flex items-center gap-1.5 py-1 px-2.5 flex-wrap">
-            <span 
+            <span
               className={`cursor-pointer hover:text-[#1967d2] hover:underline transition-colors ${currentFolderId ? 'text-[#5f6368]' : ''}`}
               onClick={() => setCurrentFolderId(null)}
             >
@@ -670,7 +610,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             {breadcrumbs.map((b) => (
               <React.Fragment key={b.id}>
                 <span className="text-[#80868b] font-normal mx-1">/</span>
-                <span 
+                <span
                   className={`cursor-pointer hover:text-[#1967d2] hover:underline transition-colors ${b.id === currentFolderId ? '' : 'text-[#5f6368]'}`}
                   onClick={() => setCurrentFolderId(b.id)}
                 >
@@ -1052,16 +992,45 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         e.stopPropagation();
                         onOpenAIOverlay(doc);
                       }}
-                      className={`border rounded-xl flex flex-col group transition-all duration-150 cursor-pointer relative ${isSelected
+                      className={`border rounded-xl flex flex-col group transition-all duration-300 cursor-pointer relative overflow-hidden ${isSelected
                         ? 'bg-[#e8f0fe] border-[#1967d2] shadow-sm'
-                        : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe] hover:shadow-md'
+                        : 'bg-white border-[#e0e3e7] hover:border-[#c7d2fe]/60 hover:shadow-md'
                         }`}
                     >
-                      {/* Document Preview Thumbnail */}
-                      <div className="h-36 bg-gray-50 flex items-center justify-center relative rounded-t-xl overflow-hidden">
-                        {renderDocPreviewMockup(doc)}
+                      {/* 1. Cover Box */}
+                      <div className="relative h-40 bg-[#f1f3f4] overflow-hidden">
+                        <img
+                          alt={doc.title}
+                          className="w-full h-full object-cover opacity-95 group-hover:scale-[1.03] group-hover:opacity-100 transition-all duration-500"
+                          src={(doc as any).thumbnailUrl || DEFAULT_COVER}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = DEFAULT_COVER;
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-white/90 to-transparent" />
 
-                        {/* Interactive overlay shortcuts */}
+                        {/* Star toggle */}
+                        <div className="absolute top-3 right-3 z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(e, doc.id);
+                            }}
+                            className="w-8 h-8 flex items-center justify-center bg-white/90 hover:bg-red-50 backdrop-blur-md rounded-full transition-colors border border-[#e0e3e7] cursor-pointer"
+                            title={doc.isFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"}
+                          >
+                            <Star className={`w-4 h-4 ${doc.isFavorite ? 'fill-[#1967d2] text-[#1967d2]' : 'text-[#5f6368]'}`} />
+                          </button>
+                        </div>
+
+                        {/* File ext badge */}
+                        <div className="absolute bottom-3 left-3">
+                          <span className="bg-[#f1f3f4] text-[#5f6368] px-2 py-0.5 rounded text-[9px] font-bold border border-[#e0e3e7] uppercase tracking-widest">
+                            {doc.type}
+                          </span>
+                        </div>
+
+                        {/* Quick Action Overlay (Glassmorphic look) */}
                         <div className="absolute inset-0 bg-white/30 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity duration-200">
                           <button
                             onClick={(e) => {
@@ -1083,26 +1052,18 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Document Meta Description */}
-                      <div className="p-3 flex flex-col gap-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center gap-2.5 overflow-hidden">
-                            <div
-                              className="p-1.5 rounded-lg text-xs font-black flex items-center justify-center shrink-0"
-                              style={{ color: doc.iconBg, backgroundColor: `${doc.iconBg}15` }}
-                            >
-                              <span className="text-[9px] tracking-wider">{doc.type.toUpperCase()}</span>
-                            </div>
-                            <h4 className={`text-sm font-semibold truncate transition-colors ${isSelected ? 'text-[#174ea6] font-bold' : 'text-[#202124] group-hover:text-[#1967d2]'}`} title={doc.title}>
-                              {doc.title}
-                            </h4>
-                          </div>
+                      {/* 2. Document Description Body */}
+                      <div className="p-4 flex flex-col flex-1 gap-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <h3 className={`font-semibold text-sm line-clamp-2 leading-relaxed ${isSelected ? 'text-[#174ea6] font-bold' : 'text-[#202124] group-hover:text-[#1967d2]'}`}>
+                            {doc.title}
+                          </h3>
 
-                          {/* Trigger context options dropdown */}
-                          <div>
+                          {/* Options Trigger */}
+                          <div className="relative">
                             <button
                               onClick={(e) => toggleDropdown(e, doc.id, 'file')}
-                              className="p-1 rounded-full text-[#5f6368] hover:bg-black/5 transition-colors"
+                              className="p-1 rounded-full text-[#5f6368] hover:bg-[#f1f3f4] hover:text-[#202124] transition-colors shrink-0 cursor-pointer"
                             >
                               <MoreVertical className="w-4 h-4" />
                             </button>
@@ -1181,19 +1142,46 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                           </div>
                         </div>
 
-                        {/* Owner & Modified details */}
-                        <div className="flex items-center justify-between text-xs text-[#5f6368] pt-1.5 border-t border-[#f1f3f4] select-none">
-                          <div className="flex items-center gap-1.5 overflow-hidden">
-                            <img
-                              src={getOwnerAvatar(doc)}
-                              alt="Owner"
-                              className="w-5 h-5 rounded-full border border-gray-150 object-cover shrink-0"
-                            />
-                            <span className="truncate">
-                              {getOwnerName(doc) === 'tôi' ? 'tôi' : getOwnerName(doc)}
-                            </span>
+                        {/* Tags (if any) */}
+                        {doc.tags && doc.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {doc.tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[9px] bg-[#e8f0fe] text-[#1967d2] px-2 py-0.5 rounded-full font-medium"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
                           </div>
-                          <span className="shrink-0 text-[#8b909a] text-[10.5px]">
+                        )}
+
+                        {/* Description (Note) */}
+                        {doc.description && doc.description.trim() && !['pdf', 'docx', 'pptx', 'txt'].includes(doc.description.trim().toLowerCase()) && (
+                          <div className="flex items-start gap-1.5 bg-[#f8fafd] border-l-2 border-[#1967d2] rounded-r-md px-2.5 py-2 text-xs text-[#5f6368]">
+                            <BookOpen className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#1967d2]" />
+                            <span className="line-clamp-2">{doc.description}</span>
+                          </div>
+                        )}
+
+                        {/* Owner (Uploader) details */}
+                        <div className="flex items-center gap-1.5 text-[11px] text-[#5f6368] select-none pt-1">
+                          <img
+                            src={getOwnerAvatar(doc)}
+                            alt="Owner"
+                            className="w-5 h-5 rounded-full border border-gray-200 object-cover shrink-0"
+                          />
+                          <span className="truncate">
+                            {getOwnerName(doc) === 'tôi' ? 'Bạn đã tải lên' : `Được chia sẻ bởi ${getOwnerName(doc)}`}
+                          </span>
+                        </div>
+
+                        {/* Footer metadata */}
+                        <div className="mt-auto flex items-center justify-between pt-3 border-t border-[#e0e3e7]">
+                          <span className="text-[11px] text-[#5f6368]/80">
+                            {doc.size}
+                          </span>
+                          <span className="text-[11px] text-[#5f6368]/80">
                             {doc.lastModified}
                           </span>
                         </div>

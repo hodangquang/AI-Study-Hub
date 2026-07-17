@@ -167,18 +167,18 @@ export default function App() {
           try {
             // 1. Resolve token
             const sharedDoc = await resolveShareToken(token);
-            
+
             // 2. Download file blob
             const fileRes = await fetch(sharedDoc.downloadUrl);
             if (!fileRes.ok) throw new Error('Không thể tải tệp tin chia sẻ từ máy chủ.');
             const blob = await fileRes.blob();
-            
+
             const fileTitle = sharedDoc.solution?.title || sharedDoc.title || 'Tài liệu chia sẻ';
             const fileExt = sharedDoc.solution?.fileExtension?.replace(/^\./, '') || 'pdf';
             const file = new File([blob], sharedDoc.solution?.fileName || sharedDoc.fileName || `${fileTitle}.${fileExt}`, {
               type: blob.type
             });
-            
+
             // 3. Upload under user's space
             const newDoc = await uploadDocumentFile(
               file,
@@ -192,7 +192,7 @@ export default function App() {
             // 4. Update documents state and open AI overlay
             setDocuments((prev) => [newDoc, ...prev]);
             setSelectedDocForAI(newDoc);
-            
+
             toast.update(toastId, {
               render: `Đã nhập tài liệu "${fileTitle}" thành công!`,
               type: 'success',
@@ -469,17 +469,17 @@ export default function App() {
           )}
         </div>
       )}
-      <ToastContainer 
-        position="top-right" 
-        autoClose={3000} 
-        hideProgressBar={false} 
-        newestOnTop={false} 
-        closeOnClick 
-        rtl={false} 
-        pauseOnFocusLoss 
-        draggable 
-        pauseOnHover 
-        theme="light" 
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
     </>
   );
