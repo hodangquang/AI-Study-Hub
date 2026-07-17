@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { StudyDocument } from '../types';
 import { X, Sparkles, AlertCircle, RefreshCw, MessageSquare, BookOpen, Lightbulb, Heading, Eye, Download, Info } from 'lucide-react';
 
@@ -64,30 +66,11 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
             advice: 'Hãy đặt câu hỏi trong chatbot để tìm hiểu thêm chi tiết.'
           });
         } catch (aiErr: any) {
-          console.warn("Lỗi tóm tắt tài liệu từ API thật, dùng tóm tắt giả lập:", aiErr);
-          try {
-            const response = await fetch('/api/gemini/analyze-doc', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                fileTitle: document.title,
-                fileType: document.type,
-              }),
-            });
-
-            if (!response.ok) {
-              throw new Error('Có lỗi xảy ra khi gọi dịch vụ phân tích tài liệu.');
-            }
-
-            const data = await response.json();
-            setAnalysis(data);
-          } catch (fallbackErr) {
-            const errMsg = aiErr.message || "";
-            if (errMsg.toLowerCase().includes("chunk") || errMsg.toLowerCase().includes("trích xuất")) {
-              throw new Error("Tài liệu chưa hoàn tất quá trình trích xuất văn bản (OCR). Vui lòng đợi hoặc tải lại trang.");
-            }
-            throw fallbackErr;
+          const errMsg = aiErr.message || '';
+          if (errMsg.toLowerCase().includes('chunk') || errMsg.toLowerCase().includes('trích xuất')) {
+            throw new Error('Tài liệu chưa hoàn tất quá trình trích xuất văn bản (OCR). Vui lòng đợi hoặc tải lại trang.');
           }
+          throw new Error(errMsg || 'Không thể tóm tắt tài liệu. Vui lòng thử lại sau.');
         }
       } catch (err: any) {
         console.error('Error analyzing:', err);
@@ -376,7 +359,11 @@ const AIDocumentOverlay: React.FC<AIDocumentOverlayProps> = ({ document, onClose
                   <p className="text-[10px] text-gray-400 font-medium">AI đang lập luận giải thích...</p>
                 </div>
               ) : (
-                <p className="whitespace-pre-line">{explanationText || 'Chưa có thông tin giải thích.'}</p>
+                <div className="prose prose-xs max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-code:bg-white prose-code:px-1 prose-code:rounded prose-code:text-[#e83e8c] prose-headings:my-2">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {explanationText || 'Chưa có thông tin giải thích.'}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
 

@@ -116,7 +116,8 @@ export async function getChatMessages(sessionId: string): Promise<GetChatMessage
  */
 export async function sendChatMessage(
   sessionId: string,
-  body: SendChatMessageRequest
+  body: SendChatMessageRequest,
+  signal?: AbortSignal
 ): Promise<SendChatMessageResponse> {
   const headers = getAuthHeaders();
   const response = await fetch(apiUrl(`/chat/sessions/${sessionId}/messages`), {
@@ -126,7 +127,8 @@ export async function sendChatMessage(
       'Content-Type': 'application/json',
       ...headers,
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {

@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ChatMessage as LocalChatMessage, StudyDocument } from '@/types';
 import { AuthUser } from '@/types/auth';
 import { 
-  Send, Bot, User, Paperclip, MessageSquare, RefreshCw, Plus, Trash2 
+  Send, Bot, User, Paperclip, MessageSquare, RefreshCw, Plus, Trash2, StopCircle
 } from 'lucide-react';
 import { 
   createChatSession, 
@@ -31,6 +33,8 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionToDeleteId, setSessionToDeleteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
 
 
   // Suggested prompts
@@ -144,6 +148,10 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
     setLoading(true);
     setInput('');
 
+    // Create a fresh AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       // 1. If there's no active session, we must create one first
       if (!currentSessionId) {
@@ -181,8 +189,8 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
       };
       setMessages(prev => [...prev, userMsg]);
 
-      // 2. Send message using currentSessionId
-      const sendRes = await sendChatMessage(currentSessionId!, { content: textToSend });
+      // 2. Send message using currentSessionId (pass signal for abort support)
+      const sendRes = await sendChatMessage(currentSessionId!, { content: textToSend }, controller.signal);
       
       // 3. Reload messages to get updated state (including assistant answer)
       const reloadRes = await getChatMessages(currentSessionId!);
@@ -197,13 +205,24 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
       setMessages(updatedMapped);
 
     } catch (error: any) {
-      console.error('Chat API Error:', error);
-      toast.error(error.message || 'Lỗi gửi tin nhắn.');
+      // Ignore AbortError — user intentionally stopped generation
+      if (error?.name === 'AbortError') {
+        console.log('Request aborted by user.');
+      } else {
+        console.error('Chat API Error:', error);
+        toast.error(error.message || 'Lỗi gửi tin nhắn.');
+      }
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
     }
   };
 
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  };
   const handleCreateNewSessionBtn = () => {
     setSelectedSessionId(null);
     setMessages([
@@ -361,12 +380,18 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
                     </span>
                   )}
 
-                  <div className={`p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                  <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
                     isAI
-                      ? 'bg-white border border-[#e0e3e7] text-[#202124] shadow-sm'
-                      : 'bg-[#e8f0fe] text-[#1967d2] shadow-sm'
+                      ? 'bg-white border border-[#e0e3e7] text-[#202124] shadow-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded prose-code:text-[#e83e8c] prose-code:text-xs prose-pre:bg-slate-900 prose-pre:text-slate-100'
+                      : 'bg-[#e8f0fe] text-[#1967d2] shadow-sm whitespace-pre-wrap'
                   }`}>
-                    {msg.text}
+                    {isAI ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.text}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.text
+                    )}
                   </div>
                 </div>
               </div>
@@ -409,23 +434,37 @@ const ChatbotView: React.FC<ChatbotViewProps> = ({ documents, initialSelectedDoc
           <form onSubmit={(e) => handleSendMessage(e)} className="flex gap-2">
             <input
               type="text"
-              className="flex-1 bg-white border border-[#e0e3e7] rounded-xl py-3 px-4 text-sm text-[#202124] placeholder:text-[#5f6368]/70 focus:outline-none focus:border-[#c7d2fe] transition-all"
+              className="flex-1 bg-white border border-[#e0e3e7] rounded-xl py-3 px-4 text-sm text-[#202124] placeholder:text-[#5f6368]/70 focus:outline-none focus:border-[#c7d2fe] transition-all disabled:bg-slate-50"
               placeholder={
-                selectedDocInfo 
-                  ? `Hỏi bất kỳ điều gì về tài liệu "${selectedDocInfo.title}"...` 
-                  : 'Đính kèm tài liệu ở trên và đặt câu hỏi ôn tập...'
+                loading 
+                  ? 'Trợ lý AI đang phản hồi...'
+                  : selectedDocInfo 
+                    ? `Hỏi bất kỳ điều gì về tài liệu "${selectedDocInfo.title}"...` 
+                    : 'Đính kèm tài liệu ở trên và đặt câu hỏi ôn tập...'
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
             />
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="w-12 h-11 bg-[#e8f0fe] hover:bg-[#dbeafe] text-[#1967d2] rounded-xl flex items-center justify-center transition-all disabled:opacity-40 disabled:hover:bg-[#e8f0fe] shrink-0 cursor-pointer"
-              title="Gửi tin nhắn"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+            {loading ? (
+              <button
+                type="button"
+                onClick={handleStopGeneration}
+                className="w-12 h-11 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer border border-red-200"
+                title="Dừng tạo văn bản"
+              >
+                <StopCircle className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className="w-12 h-11 bg-[#e8f0fe] hover:bg-[#dbeafe] text-[#1967d2] rounded-xl flex items-center justify-center transition-all disabled:opacity-40 disabled:hover:bg-[#e8f0fe] shrink-0 cursor-pointer"
+                title="Gửi tin nhắn"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            )}
           </form>
         </div>
       </div>
