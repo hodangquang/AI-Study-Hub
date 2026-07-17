@@ -92,7 +92,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'trash', label: 'Thùng rác', icon: Trash2 },
   ];
 
-  // Close brand new dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
@@ -102,6 +101,18 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (showNewMenu) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNewMenu]);
+
+  // Auto-initialize targetFolderId when modal is opened
+  useEffect(() => {
+    if (showImportModal) {
+      const realFolders = folders.filter(fol => fol.type === 'folder');
+      if (realFolders.length > 0) {
+        setTargetFolderId(realFolders[0].id);
+      } else {
+        setTargetFolderId('');
+      }
+    }
+  }, [showImportModal, folders]);
 
   return (
     <aside className="w-[260px] h-screen fixed left-0 top-0 bg-white border-r border-slate-200 flex flex-col p-4 z-50 overflow-y-auto select-none shadow-sm">
@@ -187,18 +198,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <Link className="w-5 h-5 text-[#8083ff] flex-shrink-0" />
               <span>Nhập từ liên kết chia sẻ</span>
-            </button>
-
-            {/* Folder Upload */}
-            <button
-              onClick={() => {
-                setShowNewMenu(false);
-                toast.info('Tính năng tải thư mục lên sắp ra mắt!');
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left font-medium"
-            >
-              <FolderUp className="w-5 h-5 text-indigo-600 flex-shrink-0" />
-              <span>Tải thư mục lên</span>
             </button>
           </div>
         )}
@@ -354,9 +353,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">
                       Lưu vào thư mục <span className="text-red-500">*</span>
                     </label>
-                    {folders.length === 0 ? (
+                    {folders.filter(fol => fol.type === 'folder').length === 0 ? (
                       <div className="w-full bg-amber-50 border border-amber-100 rounded-xl py-2.5 px-4 text-sm text-amber-600">
-                        Chưa có thư mục nào được tạo. Tài liệu sẽ lưu vào Lưu trữ chung.
+                        Chưa có thư mục nào được tạo. Bạn cần tạo thư mục trước để lưu tài liệu nhập vào.
                       </div>
                     ) : (
                       <select
@@ -365,8 +364,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         onChange={(e) => setTargetFolderId(e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/25"
                       >
-                        <option value="">Lưu trữ chung (Không gắn thư mục)</option>
-                        {folders.map((fol) => (
+                        {folders.filter(fol => fol.type === 'folder').map((fol) => (
                           <option key={fol.id} value={fol.id}>
                             {fol.name}
                           </option>

@@ -304,11 +304,10 @@ const FavoritesView: React.FC<FavoritesViewProps> = ({
                 )}
                 <button
                   onClick={() => handlePageChange(page)}
-                  className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                    currentPage === page
+                  className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium transition-colors cursor-pointer ${currentPage === page
                       ? 'bg-[#1967d2] text-white border border-[#1967d2]'
                       : 'bg-white border border-[#e0e3e7] text-[#5f6368] hover:bg-[#f1f3f4]'
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>

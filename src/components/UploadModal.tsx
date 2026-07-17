@@ -35,6 +35,9 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
   const [processingError, setProcessingError] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isUploadingOrProcessing = loading || (uploaded && !processingError && (ocrStatus !== 'ready' || aiStatus !== 'ready'));
 
   // Load real categories from backend on mount
   useEffect(() => {
@@ -45,6 +48,15 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
       })
       .catch(() => setCategories([]))
       .finally(() => setCatLoading(false));
+  }, []);
+
+  // Clear polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, []);
 
   const isValidFile = (file: File): string => {
@@ -116,7 +128,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
       // Poll status every 2 seconds (up to 20 times = 40s total)
       let attempts = 0;
       const maxAttempts = 20;
-      const interval = setInterval(async () => {
+      intervalRef.current = setInterval(async () => {
         attempts++;
         try {
           const status = await fetchDocumentUploadStatus(newDoc.id);
@@ -124,13 +136,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
           setAiStatus(status.aiStatus);
 
           if (status.ocrStatus === 'ready' && status.aiStatus === 'ready') {
-            clearInterval(interval);
+            if (intervalRef.current) clearInterval(intervalRef.current);
             setTimeout(() => {
               onUploadSuccess({ ...newDoc, status: 'ready' });
               onClose();
             }, 1500);
           } else if (status.ocrStatus === 'failed' || status.aiStatus === 'failed') {
-            clearInterval(interval);
+            if (intervalRef.current) clearInterval(intervalRef.current);
             setProcessingError(status.aiErrorMessage || status.ocrErrorMessage || 'Lỗi xử lý tài liệu.');
           }
         } catch (err: any) {
@@ -138,7 +150,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
         }
 
         if (attempts >= maxAttempts) {
-          clearInterval(interval);
+          if (intervalRef.current) clearInterval(intervalRef.current);
           // If timeout, just close and add it as-is
           onUploadSuccess(newDoc);
           onClose();
@@ -154,17 +166,22 @@ const UploadModal: React.FC<UploadModalProps> = ({ onClose, onUploadSuccess, fol
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div onClick={onClose} className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs" />
+      <div 
+        onClick={isUploadingOrProcessing ? undefined : onClose} 
+        className={`absolute inset-0 bg-slate-900/40 backdrop-blur-xs ${isUploadingOrProcessing ? 'cursor-not-allowed' : 'cursor-pointer'}`} 
+      />
 
       {/* Modal Card */}
       <div className="relative bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl z-10 animate-fade-in">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-bold text-lg text-slate-800">Tải lên tài liệu học tập</h3>
-          <button type="button" onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer">
-            <X className="w-5 h-5" />
-          </button>
+          {!isUploadingOrProcessing && (
+            <button type="button" onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Body */}
